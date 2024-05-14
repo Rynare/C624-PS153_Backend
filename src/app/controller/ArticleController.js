@@ -1,6 +1,7 @@
 const { getResepnya } = require("../../services/fetchResepnya")
 const { cloudinary } = require("../../utils/cloudinary")
 const { KulineryDB } = require("../database/KulineryDB")
+const { sanitizeReq } = require("../../helper/sanitizeFromXSS")
 
 const dataPerPage = 12
 
@@ -8,7 +9,23 @@ const ArticleController = {
     postArticle: async (req, res) => {
         const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
         const { secure_url } = imgUploadResult
-
+        const { author, description, title, slug, category } = req.body
+        const newArticle = KulineryDB.insertData({
+            table_name: "articles",
+            data: {
+                author: sanitizeReq(author),
+                description: sanitizeReq(description),
+                title: sanitizeReq(title),
+                slug,
+                category,
+                thumbnail: secure_url
+            }
+        })
+        res.status(201).json({
+            method: req.method,
+            status: true,
+            results: newArticle
+        })
     },
     getArticles: async (req, res) => {
         const collections = await KulineryDB.findDatas({
@@ -41,7 +58,7 @@ const ArticleController = {
         const slug = req.params.slug
         const category_slug = req.params.category_slug
 
-        const collections = await KulineryDB.findDatas({
+        const collections = await KulineryDB.findData({
             table_name: "articles",
             options: {
                 slug: { $eq: slug }

@@ -1,3 +1,4 @@
+const { sanitizeReq } = require("../../helper/sanitizeFromXSS")
 const { getResepnya } = require("../../services/fetchResepnya")
 const { cloudinary } = require("../../utils/cloudinary")
 const { KulineryDB } = require("../database/KulineryDB")
@@ -36,7 +37,26 @@ const RecipesController = {
     postRecipe: async (req, res) => {
         const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
         const { secure_url } = imgUploadResult
-
+        const { slug, title, author, desc, duration, calories, ingredients } = req.body
+        const newRecipes = await KulineryDB.insertData({
+            table_name: "recipes",
+            data: {
+                slug,
+                thumbnail: secure_url,
+                title: sanitizeReq(title),
+                author: sanitizeReq(author),
+                date_publised: new Date(),
+                desc: sanitizeReq(desc),
+                duration,
+                ingredients,
+                calories,
+            }
+        })
+        res.status(201).json({
+            method: req.method,
+            status: true,
+            results: newRecipes
+        })
     },
 
     getRecipesOnPage: async (req, res) => {
@@ -223,7 +243,7 @@ const RecipesController = {
     getRecipeDetail: async (req, res) => {
         const slug = req.params.slug
 
-        const collections = await KulineryDB.findDatas({
+        const collections = await KulineryDB.findData({
             table_name: "recipes",
             filter: {
                 "slug": { $eq: slug }
