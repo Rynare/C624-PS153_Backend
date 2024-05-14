@@ -1,0 +1,165 @@
+const { getResepnya } = require("../../services/fetchResepnya")
+const { cloudinary } = require("../../utils/cloudinary")
+const { KulineryDB } = require("../database/KulineryDB")
+
+const dataPerPage = 12
+
+const ArticleController = {
+    postArticle: async (req, res) => {
+        const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
+        const { secure_url } = imgUploadResult
+
+    },
+    getArticles: async (req, res) => {
+        const collections = await KulineryDB.findDatas({
+            table_name: "articles",
+            options: {
+                limit: dataPerPage,
+            }
+        })
+
+        const collectionTotal = collections.length || 0
+
+        if (collectionTotal >= 1) {
+            res.status(200).json({
+                method: req.method,
+                status: true,
+                results: collections
+            })
+        } else {
+            const response = await getResepnya(req, res, "/api/articles")
+            const { results } = response.data
+
+            res.status(200).json({
+                method: req.method,
+                status: true,
+                results
+            })
+        }
+    },
+    getArticleDetail: async (req, res) => {
+        const slug = req.params.slug
+        const category_slug = req.params.category_slug
+
+        const collections = await KulineryDB.findDatas({
+            table_name: "articles",
+            options: {
+                slug: { $eq: slug }
+            }
+        })
+
+        const collectionTotal = collections.length || 0
+
+        if (collectionTotal >= 1) {
+            res.status(200).json({
+                method: req.method,
+                status: true,
+                results: collections
+            })
+        } else {
+            const response = await getResepnya(req, res, `/api/article/${category_slug}/${slug}`)
+            const { results } = response.data
+
+            res.status(200).json({
+                method: req.method,
+                status: true,
+                results
+            })
+        }
+    },
+    getArticlesOnPage: async (req, res) => {
+        const page = req.params.page
+
+        const collections = await KulineryDB.findDatas({
+            table_name: "articles",
+            options: {
+                limit: dataPerPage,
+                skip: page * dataPerPage
+            }
+        })
+
+        const collectionTotal = collections.length || 0
+
+        if (collectionTotal >= 1) {
+            res.status(200).json({
+                method: req.method,
+                status: true,
+                results: collections
+            })
+        } else {
+            const response = await getResepnya(req, res, "/api/articles/page/" + page)
+            const { results } = response.data
+
+            res.status(200).json({
+                method: req.method,
+                status: true,
+                results
+            })
+        }
+    },
+    getArticlesByCategory: async (req, res) => {
+        const category_slug = req.params.category_slug
+        const collections = await KulineryDB.findDatas({
+            table_name: "articles",
+            filter: {
+                category: { $eq: category_slug }
+            },
+            options: {
+                limit: dataPerPage,
+            }
+        })
+
+        const collectionTotal = collections.length || 0
+
+        if (collectionTotal >= 1) {
+            res.status(200).json({
+                method: req.method,
+                status: true,
+                results: collections
+            })
+        } else {
+            const response = await getResepnya(req, res, `/api/articles/category/${category_slug}`)
+            const { results } = response.data
+
+            res.status(200).json({
+                method: req.method,
+                status: true,
+                results
+            })
+        }
+    },
+    getArticlesByCategoryOnPage: async (req, res) => {
+        const page = req.params.page
+        const category_slug = req.params.category_slug
+        const collections = await KulineryDB.findDatas({
+            table_name: "articles",
+            filter: {
+                category: { $eq: category_slug }
+            },
+            options: {
+                limit: dataPerPage,
+                skip: dataPerPage * page,
+            }
+        })
+
+        const collectionTotal = collections.length || 0
+
+        if (collectionTotal >= 1) {
+            res.status(200).json({
+                method: req.method,
+                status: true,
+                results: collections
+            })
+        } else {
+            const response = await getResepnya(req, res, `/api/articles/category/${category_slug}/${page}`)
+            const { results } = response.data
+
+            res.status(200).json({
+                method: req.method,
+                status: true,
+                results
+            })
+        }
+    },
+}
+module.exports = { ArticleController }

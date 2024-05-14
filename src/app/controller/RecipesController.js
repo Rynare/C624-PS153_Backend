@@ -36,6 +36,7 @@ const RecipesController = {
     postRecipe: async (req, res) => {
         const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
         const { secure_url } = imgUploadResult
+
     },
 
     getRecipesOnPage: async (req, res) => {
