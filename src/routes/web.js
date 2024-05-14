@@ -1,11 +1,14 @@
 const route = require('express').Router();
-const { body } = require('express-validator');
 const { CategoriesController } = require('../app/controller/CategoriesController');
 const { CommentController } = require('../app/controller/CommentController');
 const { RecipesController } = require('../app/controller/RecipesController');
 const { validationHandler } = require("../app/middleware/validationHandler");
 const { CommentModel } = require('../app/model/CommentModel');
 const { RecipeModel } = require('../app/model/RecipeModel');
+const { uploadThis, handleMulterError } = require('../app/middleware/multerUploader');
+const { ArticleModel } = require('../app/model/ArticleModel');
+const { ArticleController } = require('../app/controller/ArticleController');
+const { AuthController } = require('../app/controller/AuthController');
 
 route.get(['/', '/api'], (req, res) => {
     res.json({
@@ -21,30 +24,30 @@ route.get(['/', '/api'], (req, res) => {
     });
 });
 
-// route.post("/register",)
-// route.get()
+route.post("/api/user", AuthController.postNewUser)
+route.get("/api/user", AuthController.getUser)
 
 route.get("/api/recipes/categories", CategoriesController.getRecipesCategory)
 route.get("/api/articles/categories", CategoriesController.getArticleCategory)
 
-route.post("/api/recipe", RecipeModel, validationHandler, RecipesController.postRecipe)
 route.get("/api/recipes", RecipesController.getRecipes)
-// route.get("/api/recipes/page/:page",)
-// route.get("/api/recipes/search/",)
-// route.get("/api/recipes/detail-:slug",)
-// route.get("/api/recipes/category/:category_slug",)
-// route.get("/api/recipes/category/:category_slug/:page",)
+route.post("/api/recipe", RecipeModel, validationHandler, uploadThis.single("thumbnail"), handleMulterError, RecipesController.postRecipe)
+route.get("/api/recipes/page/:page", RecipesController.getRecipesOnPage)
+route.get("/api/recipes/search/:keyword", RecipesController.getRecipesBySearch)
+route.get("/api/recipes/page/search/:keyword/:page", RecipesController.getRecipesBySearchOnPage)
+route.get("/api/recipe/detail-:slug", RecipesController.getRecipeDetail)
+route.get("/api/recipes/category/:category_slug", RecipesController.getRecipesByCategory)
+route.get("/api/recipes/category/:category_slug/:page", RecipesController.getRecipesByCategoryOnPage)
 
-// route.get("/api/articles/",)
-// route.get("/api/articles/category/:category_slug",)
-// route.get("/api/articles/category/:category_slug/:page",)
-// route.post("/api/articles/",)
-// route.get("/api/articles/page/:page",)
-// route.get("/api/articles/search/",)
-// route.get("/api/articles/detail-:slug",)
+route.post("/api/article/", ArticleModel, validationHandler, uploadThis.single("thumbnail"), handleMulterError, ArticleController.postArticle)
+route.get("/api/articles/", ArticleController.getArticles)
+route.get("/api/articles/page/:page", ArticleController.getArticlesOnPage)
+route.get("/api/articles/category/:category_slug", ArticleController.getArticlesByCategory)
+route.get("/api/articles/category/:category_slug/:page", ArticleController.getArticlesByCategoryOnPage)
+route.get("/api/article/:category_slug/detail-:slug", ArticleController.getArticleDetail)
 
-// route.get("/api/comments/:url")
-// route.post("/api/comments/:url", CommentModel, validationHandler, CommentController.post)
+route.get("/api/comments/:url", CommentController.getComment)
+route.post("/api/comments/:url", CommentModel, validationHandler, CommentController.postComment)
 
 route.get('*', (req, res) => {
     res.status(404).json({

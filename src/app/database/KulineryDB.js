@@ -15,9 +15,16 @@ const client = new MongoClient(uri, {
     }
 });
 
+
 const KulineryDB = {
     getConnection() {
         return client.db(ATLAS_DBNAME);
+    },
+
+    async getTotalItem(table_name) {
+        const database = this.getConnection();
+        const collection = database.collection(table_name);
+        // collection.
     },
 
     async insertData({ table_name, data }) {

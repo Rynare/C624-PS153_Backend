@@ -4,77 +4,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Auth App</title>
+    <title>Form Upload Gambar</title>
 </head>
 
 <body>
-    <button id="signInButton">Create Account / Sign In</button>
-    <button id="signOutButton">Sign Out</button>
 
-    <div id="message">
-        <p>You have signed in as <span id="userName"></span> with the email <span id="userEmail"></span> </p>
-    </div>
+    <h2>Form Upload Gambar</h2>
 
-    <script type="module">
+    <form method="post" enctype="multipart/form-data">
+        <label for="thumbnail">Pilih Gambar:</label><br>
+        <input type="file" id="thumbnail" name="thumbnail" accept="image/jpeg, image/jpg, image/webp"><br><br>
+        <input type="submit" value="Submit">
+    </form>
 
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+    <script>
+        const form = document.querySelector('form');
 
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Mencegah form untuk melakukan submit langsung
 
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
+            const formData = new FormData(form); // Membuat objek FormData untuk mengirim data form
 
-        // Add your own Firebase config here
+            // const fileInput = document.querySelector('input[type="file"]');
+            // const file = fileInput.files[0]; // Mengambil file yang diunggah
 
+            // formData.append('thumbnail', file); // Menambahkan file ke FormData dengan nama thumbnail
 
+            try {
+                const response = await fetch("http://localhost:3000/api/recipe", {
+                    method: 'POST',
+                    // headers: {
+                    //     "content-type": "application/json"
+                    // },
+                    body: formData
+                });
 
+                if (!response.ok) {
+                    await response.json().then(res => {
+                        throw res
+                    })
+                }
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth();
-        const provider = new GoogleAuthProvider()
+                const responseData = await response.json();
+                console.log('URL gambar yang diunggah:', responseData);
 
-        const signInButton = document.getElementById("signInButton");
-        const signOutButton = document.getElementById("signOutButton");
-        const message = document.getElementById("message");
-        const userName = document.getElementById("userName");
-        const userEmail = document.getElementById("userEmail");
+                // Lakukan sesuatu setelah gambar berhasil diunggah, seperti menampilkan gambar atau memberikan feedback ke pengguna
 
-        signOutButton.style.display = "none";
-        message.style.display = "none";
-
-        const userSignIn = async () => {
-            signInWithPopup(auth, provider)
-                .then((result) => {
-                    const user = result.user
-                    console.log(user);
-                }).catch((error) => {
-                    const errorCode = error.code;
-                    const errorMessage = error.message
-                })
-        }
-
-        const userSignOut = async () => {
-            signOut(auth).then(() => {
-                alert("You have signed out successfully!");
-            }).catch((error) => { })
-        }
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                signOutButton.style.display = "block";
-                message.style.display = "block";
-                userName.innerHTML = user.displayName;
-                userEmail.innerHTML = user.email
-            } else {
-                signOutButton.style.display = "none";
-                message.style.display = "none";
+            } catch (error) {
+                throw error
+                // Berikan feedback kepada pengguna bahwa terjadi kesalahan saat mengunggah gambar
             }
-        })
-
-        signInButton.addEventListener('click', userSignIn);
-        signOutButton.addEventListener('click', userSignOut);
-
-
+        });
 
     </script>
+
 </body>
 
 </html>

@@ -2,7 +2,7 @@ const { KulineryDB } = require("../database/KulineryDB")
 const { sanitizeReq } = require("../../helper/sanitizeFromXSS")
 
 const CommentController = {
-    post: function (req, res) {
+    postComment: function (req, res) {
         const { username, msg } = sanitizeReq(req.body)
         const currentDate = new Date();
         const url = req.params.url
@@ -22,6 +22,9 @@ const CommentController = {
             console.error('Error inserting comment:', err);
             res.status(500).json({ error: 'Internal server error' });
         });
+    },
+    getComment: async (req, res) => {
+        const url = req.params.url
     }
 }
 
