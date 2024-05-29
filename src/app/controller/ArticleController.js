@@ -2,8 +2,10 @@ const { getResepnya } = require("../../services/fetchResepnya")
 const { cloudinary } = require("../../utils/cloudinary")
 const { KulineryDB } = require("../database/KulineryDB")
 const { sanitizeReq } = require("../../helper/sanitizeFromXSS")
+const { response } = require("express")
 
 const dataPerPage = 12
+const tableName = "articles";
 
 const ArticleController = {
     postArticle: async (req, res) => {
@@ -29,7 +31,7 @@ const ArticleController = {
     },
     getArticles: async (req, res) => {
         const collections = await KulineryDB.findDatas({
-            table_name: "articles",
+            table_name: tableName,
             options: {
                 limit: dataPerPage,
             }
@@ -40,17 +42,16 @@ const ArticleController = {
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
+                pages: KulineryDB.getTotalItem({ table_name: tableName }) / dataPerPage,
                 status: true,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, "/api/articles")
-            const { results } = response.data
-
             res.status(200).json({
                 method: req.method,
-                status: true,
-                results
+                pages: KulineryDB.getTotalItem({ table_name: tableName }) / dataPerPage,
+                status: false,
+                results: collections
             })
         }
     },
@@ -60,7 +61,7 @@ const ArticleController = {
 
         const collections = await KulineryDB.findData({
             table_name: "articles",
-            options: {
+            filter: {
                 slug: { $eq: slug }
             }
         })

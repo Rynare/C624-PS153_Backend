@@ -21,10 +21,10 @@ const KulineryDB = {
         return client.db(ATLAS_DBNAME);
     },
 
-    async getTotalItem(table_name) {
+    async getTotalItem({ table_name, filter }) {
         const database = this.getConnection();
         const collection = database.collection(table_name);
-        // collection.
+        return collection.countDocuments(filter)
     },
 
     async insertData({ table_name, data }) {
