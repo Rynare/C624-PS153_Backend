@@ -2,7 +2,9 @@ const { body } = require("express-validator");
 const { KulineryDB } = require("../database/KulineryDB");
 
 const ArticleModel = [
-    body("slug").notEmpty().isSlug()
+    body("slug")
+        .notEmpty().withMessage("slug tidak boleh kosong")
+        .isSlug().withMessage("slug tidak valid")
         .custom(async value => {
             const slug = await KulineryDB.findData({
                 table_name: "articles",
@@ -11,14 +13,21 @@ const ArticleModel = [
                 }
             })
             if (slug) {
-                throw new Error("Slug sudah terpakai.")
+                throw new Error("slug sudah terpakai.")
             }
         }),
-    body("title").notEmpty().isString(),
-    body("category").notEmpty().isSlug(),
-    body("author").notEmpty().isString(),
-    body("description").notEmpty().isArray(),
-    body("description.*").notEmpty().isString(),
+    body("title")
+        .notEmpty().withMessage("title tidak boleh kosong.")
+        .isString().withMessage("title harus berupa string."),
+    body("category")
+        .notEmpty().withMessage("category tidak boleh kosong.")
+        .isIn(["uncategorized", "tips-masak", "inspirasi-dapur", "makanan-gaya-hidup", "resep-lezat-anti-sisa"]).withMessage("category tidak valid."),
+    body("author")
+        .notEmpty().withMessage("author tidak boleh kosong.")
+        .isString().withMessage("author harus berupa string."),
+    body("description")
+        .notEmpty().withMessage("description tidak boleh kosong.")
+        .isString().withMessage("description harus berupa string"),
 ]
 
 module.exports = { ArticleModel }
