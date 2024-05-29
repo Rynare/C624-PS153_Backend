@@ -4,6 +4,7 @@ const { cloudinary } = require("../../utils/cloudinary")
 const { KulineryDB } = require("../database/KulineryDB")
 
 const dataPerPage = 12
+const tableName = "recipes"
 
 const RecipesController = {
     getRecipes: async (req, res) => {
@@ -15,20 +16,21 @@ const RecipesController = {
         })
 
         const collectionTotal = collections.length || 0
+        const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+        const totalPages = Math.ceil(totalDocs / dataPerPage)
 
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
                 status: true,
+                pages: totalPages,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, "/api/recipes")
-            const { results } = response.data
-
             res.status(200).json({
                 method: req.method,
-                status: true,
+                status: false,
+                pages: totalPages,
                 results
             })
         }

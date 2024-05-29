@@ -12,7 +12,16 @@ const ArticleController = {
     postArticle: async (req, res) => {
         const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
         const { secure_url } = imgUploadResult
-        const { author, description, title, slug, category } = req.body
+        const { author, description, title, slug, category: categorySlug } = req.body
+        const getCategoryName = (catSlug) => catSlug.split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+
+        category = {
+            "categorySlug": category,
+            "categoryName": getCategoryName(categorySlug),
+        }
+
         const newArticle = KulineryDB.insertData({
             table_name: "articles",
             data: {
