@@ -3,6 +3,7 @@ const { cloudinary } = require("../../utils/cloudinary")
 const { KulineryDB } = require("../database/KulineryDB")
 const { sanitizeReq } = require("../../helper/sanitizeFromXSS")
 const { response } = require("express")
+const moment = require("moment")
 
 const dataPerPage = 12
 const tableName = "articles";
@@ -15,12 +16,13 @@ const ArticleController = {
         const newArticle = KulineryDB.insertData({
             table_name: "articles",
             data: {
-                author: sanitizeReq(author),
-                description: sanitizeReq(description),
-                title: sanitizeReq(title),
                 slug,
+                title: sanitizeReq(title),
+                thumbnail: secure_url,
+                author: sanitizeReq(author),
+                datePublised: moment().toISOString(),
+                description: sanitizeReq(description),
                 category,
-                thumbnail: secure_url
             }
         })
         res.status(201).json({
@@ -45,18 +47,20 @@ const ArticleController = {
         })
 
         const collectionTotal = collections.length || 0
+        const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+        const totalPages = Math.ceil(totalDocs / dataPerPage)
 
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
-                pages: KulineryDB.getTotalItem({ table_name: tableName }) / dataPerPage,
+                pages: totalPages,
                 status: true,
                 results: collections
             })
         } else {
             res.status(200).json({
                 method: req.method,
-                pages: KulineryDB.getTotalItem({ table_name: tableName }) / dataPerPage,
+                pages: totalPages,
                 status: false,
                 results: collections
             })
@@ -99,26 +103,34 @@ const ArticleController = {
             table_name: "articles",
             options: {
                 limit: dataPerPage,
-                skip: page * dataPerPage
+                skip: page * dataPerPage,
+                projection: {
+                    _id: 0,
+                    slug: 1,
+                    title: 1,
+                    thumbnail: 1,
+                    category: 1,
+                }
             }
         })
 
         const collectionTotal = collections.length || 0
+        const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+        const totalPages = Math.ceil(totalDocs / dataPerPage)
 
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
+                pages: totalPages,
                 status: true,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, "/api/articles/page/" + page)
-            const { results } = response.data
-
             res.status(200).json({
                 method: req.method,
-                status: true,
-                results
+                pages: totalPages,
+                status: false,
+                results: collections
             })
         }
     },
