@@ -34,6 +34,12 @@ const ArticleController = {
             table_name: tableName,
             options: {
                 limit: dataPerPage,
+                projection: {
+                    _id: 0,
+                    slug: 1,
+                    title: 1,
+                    thumbnail: 1,
+                }
             }
         })
 
