@@ -39,6 +39,7 @@ const ArticleController = {
                     slug: 1,
                     title: 1,
                     thumbnail: 1,
+                    category: 1,
                 }
             }
         })
