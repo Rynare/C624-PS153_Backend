@@ -13,6 +13,18 @@ const RecipesController = {
         const { secure_url } = imgUploadResult
         const { slug, title, author, desc, duration, calories, ingredients } = req.body
         const [uid, email] = author;
+        function clasifyCalories(value) {
+            if (value >= 500 && value <= 799) {
+                return "medium"
+            } else if (value >= 800) {
+                return "high"
+            }
+            return "low"
+        }
+        const caloriesArr = [
+            clasifyCalories(calories),
+            calories + "Kkal"
+        ]
         const { name: authorName } = await KulineryDB.findData({
             table_name: "users",
             filter: {
@@ -29,7 +41,7 @@ const RecipesController = {
                 datepublished: moment().toISOString(),
                 description: sanitizeReq(desc),
                 duration,
-                calories: calories.map(sanitizeReq),
+                calories: calories ? caloriesArr : [],
                 portion,
                 ingredients: ingredients.map(sanitizeReq),
                 steps: steps.map(sanitizeReq),
