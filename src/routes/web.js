@@ -11,6 +11,7 @@ const { ArticleController } = require('../app/controller/ArticleController');
 const { AuthController } = require('../app/controller/AuthController');
 const { UserModel } = require('../app/model/UserModel');
 const { SlugController } = require('../app/controller/SlugController');
+const { PopularController } = require('../app/controller/PopularController');
 
 route.get(['/', '/api'], (req, res) => {
     res.json({
@@ -54,6 +55,9 @@ route.get("/api/article/:category_slug/detail-:slug", ArticleController.getArtic
 route.get("/api/comments/:url", CommentController.getComment)
 route.get("/api/comments/:url/:load", CommentController.getCommentOnLoad)
 route.post("/api/comments/:url", CommentModel, validationHandler, CommentController.postComment)
+
+route.get("/api/popular-articles", PopularController.topArticles)
+route.get("/api/popular-recipes", PopularController.topRecipes)
 
 route.get('*', (req, res) => {
     res.status(404).json({
