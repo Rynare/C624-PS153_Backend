@@ -22,7 +22,28 @@ const RecipeModel = [
         .isString().withMessage("Title harus berupa string."),
     body("author")
         .notEmpty().withMessage("Author tidak boleh kosong.")
-        .isString().withMessage("Author harus berupa string."),
+        .isArray({ min: 2, max: 2 }).withMessage("Author harus berupa array yang berisi uid dan email")
+        .custom(async value => {
+            if (!Array.isArray(value) || value.length !== 2) {
+                throw new Error("Author harus berupa array yang berisi uid dan email");
+            }
+
+            const [uid, email] = value;
+
+            const authorUID = await KulineryDB.findData({
+                table_name: "users",
+                filter: {
+                    uid: { $eq: uid },
+                    email: { $eq: email }
+                }
+            });
+
+            if (!authorUID) {
+                throw new Error("Tindakan dilarang! Pastikan anda telah login.");
+            }
+
+            return true;
+        }),
     body("datePublished")
         .notEmpty().withMessage("DatePublished tidak boleh kosong.")
         .custom(value => {
@@ -41,7 +62,7 @@ const RecipeModel = [
         .isInt().withMessage("Calories harus berupa integer"),
     body("portion")
         .notEmpty().withMessage("Portion tidak boleh kosong.")
-        .isInt({ min: 1 }).withMessage("Portion harus berupa angka positif."),
+        .isInt({ min: 1, max: 10 }).withMessage("Portion harus berupa angka positif."),
     body("ingredients")
         .isArray({ min: 1 }).withMessage("Ingredients harus berupa array dan tidak boleh kosong.")
         .custom(ingredients => {
@@ -65,7 +86,7 @@ const RecipeModel = [
     body("tips")
         .isArray().withMessage("Tips harus berupa array."),
     body("tags")
-        .isArray({ min: 1 }).withMessage("Tags harus berupa array dan tidak boleh kosong.")
+        .isArray().withMessage("Tags harus berupa array.")
         .custom(tags => {
             tags.forEach(tag => {
                 if (typeof tag !== 'string') {

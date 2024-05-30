@@ -2,6 +2,7 @@ const { sanitizeReq } = require("../../helper/sanitizeFromXSS")
 const { getResepnya } = require("../../services/fetchResepnya")
 const { cloudinary } = require("../../utils/cloudinary")
 const { KulineryDB } = require("../database/KulineryDB")
+const moment = require("moment")
 
 const dataPerPage = 12
 const tableName = "recipes"
@@ -11,18 +12,30 @@ const RecipesController = {
         const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
         const { secure_url } = imgUploadResult
         const { slug, title, author, desc, duration, calories, ingredients } = req.body
+        const [uid, email] = author;
+        const { name: authorName } = await KulineryDB.findData({
+            table_name: "users",
+            filter: {
+                uid: { $eq: uid },
+                email: { $eq: email }
+            }
+        })
         const newRecipes = await KulineryDB.insertData({
             table_name: "recipes",
             data: {
                 slug,
-                thumbnail: secure_url,
                 title: sanitizeReq(title),
-                author: sanitizeReq(author),
-                datepublished: new Date(),
-                desc: sanitizeReq(desc),
+                author: authorName,
+                datepublished: moment().toISOString(),
+                description: sanitizeReq(desc),
                 duration,
-                ingredients,
-                calories,
+                calories: calories.map(sanitizeReq),
+                portion,
+                ingredients: ingredients.map(sanitizeReq),
+                steps: steps.map(sanitizeReq),
+                tips: tips.length >= 1 ? tips.map(sanitizeReq) : [],
+                tags: tags.length >= 1 ? tags.map(sanitizeReq) : [],
+                thumbnail: secure_url,
             }
         })
         res.status(201).json({
