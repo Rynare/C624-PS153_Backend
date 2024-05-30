@@ -7,11 +7,45 @@ const dataPerPage = 12
 const tableName = "recipes"
 
 const RecipesController = {
+    postRecipe: async (req, res) => {
+        const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
+        const { secure_url } = imgUploadResult
+        const { slug, title, author, desc, duration, calories, ingredients } = req.body
+        const newRecipes = await KulineryDB.insertData({
+            table_name: "recipes",
+            data: {
+                slug,
+                thumbnail: secure_url,
+                title: sanitizeReq(title),
+                author: sanitizeReq(author),
+                datepublished: new Date(),
+                desc: sanitizeReq(desc),
+                duration,
+                ingredients,
+                calories,
+            }
+        })
+        res.status(201).json({
+            method: req.method,
+            status: true,
+            results: newRecipes
+        })
+    },
+
     getRecipes: async (req, res) => {
         const collections = await KulineryDB.findDatas({
             table_name: "recipes",
             options: {
                 limit: dataPerPage,
+                projection: {
+                    _id: 0,
+                    slug: 1,
+                    title: 1,
+                    thumbnail: 1,
+                    duration: 1,
+                    difficulty: 1,
+                    calories: 1,
+                }
             }
         })
 
@@ -31,62 +65,52 @@ const RecipesController = {
                 method: req.method,
                 status: false,
                 pages: totalPages,
-                results
+                results: collections
             })
         }
     },
 
-    postRecipe: async (req, res) => {
-        const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
-        const { secure_url } = imgUploadResult
-        const { slug, title, author, desc, duration, calories, ingredients } = req.body
-        const newRecipes = await KulineryDB.insertData({
-            table_name: "recipes",
-            data: {
-                slug,
-                thumbnail: secure_url,
-                title: sanitizeReq(title),
-                author: sanitizeReq(author),
-                date_publised: new Date(),
-                desc: sanitizeReq(desc),
-                duration,
-                ingredients,
-                calories,
-            }
-        })
-        res.status(201).json({
-            method: req.method,
-            status: true,
-            results: newRecipes
-        })
-    },
-
     getRecipesOnPage: async (req, res) => {
-        const page = req.params.page
+        let { page } = req.params
+        if (page >= 1) {
+            page -= 1
+        } else {
+            page = 0
+        }
         const collections = await KulineryDB.findDatas({
             table_name: "recipes",
             options: {
                 limit: dataPerPage,
-                skip: dataPerPage * page
+                skip: dataPerPage * page,
+                projection: {
+                    _id: 0,
+                    slug: 1,
+                    title: 1,
+                    thumbnail: 1,
+                    duration: 1,
+                    difficulty: 1,
+                    calories: 1,
+                }
             }
         })
 
         const collectionTotal = collections.length || 0
+        const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+        const totalPages = Math.ceil(totalDocs / dataPerPage)
 
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
                 status: true,
+                pages: totalPages,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, "/api/recipes/page/" + page)
-            const { results } = response.data
-
             res.status(200).json({
                 method: req.method,
-                status: true,
-                results
+                status: false,
+                pages: totalPages,
+                results: collections
             })
         }
     },
@@ -97,78 +121,123 @@ const RecipesController = {
         const collections = await KulineryDB.findDatas({
             table_name: "recipes",
             filter: {
-                "title": { $regex: keyword },
-                "desc": { $regex: keyword },
-                "ingredients": {
-                    $elemMatch: { $regex: keyword }
-                },
-                "steps": {
-                    $elemMatch: { $regex: keyword }
-                },
+                $or: [
+                    { title: { $regex: keyword, $options: 'i' } },
+                    { desc: { $regex: keyword, $options: 'i' } },
+                    { ingredients: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+                    { steps: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+                    { tips: { $elemMatch: { $regex: keyword, $options: 'i' } } }
+                ]
             },
             options: {
-                limit: dataPerPage
+                limit: dataPerPage,
+                projection: {
+                    _id: 0,
+                    slug: 1,
+                    title: 1,
+                    thumbnail: 1,
+                    duration: 1,
+                    difficulty: 1,
+                    calories: 1,
+                }
             }
         })
 
         const collectionTotal = collections.length || 0
+        const totalDocs = await KulineryDB.getTotalItem({
+            table_name: tableName,
+            filter: {
+                $or: [
+                    { title: { $regex: keyword, $options: 'i' } },
+                    { desc: { $regex: keyword, $options: 'i' } },
+                    { ingredients: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+                    { steps: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+                    { tips: { $elemMatch: { $regex: keyword, $options: 'i' } } }
+                ]
+            },
+        }) || 0
+        const totalPages = Math.ceil(totalDocs / dataPerPage)
 
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
                 status: true,
+                pages: totalPages,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, "/api/recipes/search/" + keyword)
-            const { results } = response.data
-
             res.status(200).json({
                 method: req.method,
-                status: true,
-                results
+                status: false,
+                pages: totalPages,
+                results: collections
             })
         }
     },
 
     getRecipesBySearchOnPage: async (req, res) => {
-        const page = req.params.page
+        let { page } = req.params
+        if (page >= 1) {
+            page -= 1
+        } else {
+            page = 0
+        }
         const keyword = req.params.keyword
 
         const collections = await KulineryDB.findDatas({
             table_name: "recipes",
             filter: {
-                "title": { $regex: keyword },
-                "desc": { $regex: keyword },
-                "ingredients": {
-                    $elemMatch: { $regex: keyword }
-                },
-                "steps": {
-                    $elemMatch: { $regex: keyword }
-                },
+                $or: [
+                    { title: { $regex: keyword, $options: 'i' } },
+                    { desc: { $regex: keyword, $options: 'i' } },
+                    { ingredients: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+                    { steps: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+                    { tips: { $elemMatch: { $regex: keyword, $options: 'i' } } }
+                ]
             },
             options: {
                 limit: dataPerPage,
-                skip: dataPerPage * page
+                skip: dataPerPage * page,
+                projection: {
+                    _id: 0,
+                    slug: 1,
+                    title: 1,
+                    thumbnail: 1,
+                    duration: 1,
+                    difficulty: 1,
+                    calories: 1,
+                }
             }
         })
 
         const collectionTotal = collections.length || 0
+        const totalDocs = await KulineryDB.getTotalItem({
+            table_name: tableName,
+            filter: {
+                $or: [
+                    { title: { $regex: keyword, $options: 'i' } },
+                    { desc: { $regex: keyword, $options: 'i' } },
+                    { ingredients: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+                    { steps: { $elemMatch: { $regex: keyword, $options: 'i' } } },
+                    { tips: { $elemMatch: { $regex: keyword, $options: 'i' } } }
+                ]
+            },
+        }) || 0
+        const totalPages = Math.ceil(totalDocs / dataPerPage)
 
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
                 status: true,
+                pages: totalPages,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, `/api/recipes/search/${keyword}/${page}`)
-            const { results } = response.data
-
             res.status(200).json({
                 method: req.method,
-                status: true,
-                results
+                status: false,
+                pages: totalPages,
+                results: collections
             })
         }
     },
@@ -179,42 +248,61 @@ const RecipesController = {
         const collections = await KulineryDB.findDatas({
             table_name: "recipes",
             filter: {
-                "category": { $regex: category_slug }
+                "category.slug": { $eq: category_slug }
             },
             options: {
-                limit: dataPerPage
+                limit: dataPerPage,
+                projection: {
+                    _id: 0,
+                    slug: 1,
+                    title: 1,
+                    thumbnail: 1,
+                    duration: 1,
+                    difficulty: 1,
+                    calories: 1,
+                }
             }
         })
 
         const collectionTotal = collections.length || 0
+        const totalDocs = await KulineryDB.getTotalItem({
+            table_name: tableName,
+            filter: {
+                "category.slug": { $eq: category_slug }
+            },
+        }) || 0
+        const totalPages = Math.ceil(totalDocs / dataPerPage)
 
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
                 status: true,
+                pages: totalPages,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, "/api/recipes/category/" + category_slug)
-
-            const { results } = response.data
-
             res.status(200).json({
                 method: req.method,
-                status: true,
-                results
+                status: false,
+                pages: totalPages,
+                results: collections
             })
         }
     },
 
     getRecipesByCategoryOnPage: async (req, res) => {
         const category_slug = req.params.category_slug
-        const page = req.params.page
+        let { page } = req.params
+        if (page >= 1) {
+            page -= 1
+        } else {
+            page = 0
+        }
 
         const collections = await KulineryDB.findDatas({
             table_name: "recipes",
             filter: {
-                "category": { $regex: category_slug }
+                "category.slug": { $eq: category_slug }
             },
             options: {
                 limit: dataPerPage,
@@ -223,51 +311,56 @@ const RecipesController = {
         })
 
         const collectionTotal = collections.length || 0
+        const totalDocs = await KulineryDB.getTotalItem({
+            table_name: tableName, filter: {
+                "category.slug": { $eq: category_slug }
+            },
+        }) || 0
+        const totalPages = Math.ceil(totalDocs / dataPerPage)
 
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
                 status: true,
+                pages: totalPages,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, `/api/recipes/category/${category_slug}/${page}`)
-            const { results } = response.data
-
             res.status(200).json({
                 method: req.method,
-                status: true,
-                results
+                status: false,
+                pages: totalPages,
+                results: collections
             })
         }
     },
 
     getRecipeDetail: async (req, res) => {
-        const slug = req.params.slug
+        const { slug } = req.params
 
         const collections = await KulineryDB.findData({
             table_name: "recipes",
             filter: {
                 "slug": { $eq: slug }
             },
+            options: {
+                projection: {
+                    _id: 0,
+                }
+            }
         })
 
-        const collectionTotal = collections.length || 0
-
-        if (collectionTotal >= 1) {
+        if (collections) {
             res.status(200).json({
                 method: req.method,
                 status: true,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, `/api/recipe/${slug}/`)
-            const { results } = response.data
-
-            res.status(200).json({
+            res.status(404).json({
                 method: req.method,
-                status: true,
-                results
+                status: false,
+                results: []
             })
         }
     }
