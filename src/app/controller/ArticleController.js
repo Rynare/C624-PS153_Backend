@@ -22,23 +22,34 @@ const ArticleController = {
             "categoryName": getCategoryName(categorySlug),
         }
 
-        const newArticle = KulineryDB.insertData({
+        const newArticle = await KulineryDB.insertData({
             table_name: "articles",
             data: {
                 slug,
                 title: sanitizeReq(title),
                 thumbnail: secure_url,
                 author: sanitizeReq(author),
-                datePublised: moment().toISOString(),
+                datepublished: moment().toISOString(),
                 description: sanitizeReq(description),
                 category,
             }
         })
-        res.status(201).json({
-            method: req.method,
-            status: true,
-            results: newArticle
-        })
+        if (newArticle) {
+            res.status(201).json({
+                method: req.method,
+                status: true,
+                results: newArticle
+            })
+        } else {
+            res.status(500).json({
+                method: req.method,
+                status: false,
+                results: {
+                    error: "Error",
+                    message: "Gagal menambahkan artikel baru. Terjadi kendala pada server kammi."
+                }
+            })
+        }
     },
     getArticles: async (req, res) => {
         const collections = await KulineryDB.findDatas({
@@ -77,42 +88,46 @@ const ArticleController = {
     },
     getArticleDetail: async (req, res) => {
         const slug = req.params.slug
-        const category_slug = req.params.category_slug
 
         const collections = await KulineryDB.findData({
             table_name: "articles",
             filter: {
                 slug: { $eq: slug }
+            },
+            options: {
+                projection: {
+                    _id: 0,
+                }
             }
         })
 
-        const collectionTotal = collections.length || 0
-
-        if (collectionTotal >= 1) {
+        if (collections) {
             res.status(200).json({
                 method: req.method,
                 status: true,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, `/api/article/${category_slug}/${slug}`)
-            const { results } = response.data
-
-            res.status(200).json({
+            res.status(404).json({
                 method: req.method,
-                status: true,
-                results
+                status: false,
+                results: collections
             })
         }
     },
     getArticlesOnPage: async (req, res) => {
-        const page = req.params.page
+        let { page } = req.params
+        if (page >= 1) {
+            page -= 1
+        } else {
+            page = 0
+        }
 
         const collections = await KulineryDB.findDatas({
             table_name: "articles",
             options: {
                 limit: dataPerPage,
-                skip: page * dataPerPage,
+                skip: dataPerPage * page,
                 projection: {
                     _id: 0,
                     slug: 1,
@@ -148,62 +163,93 @@ const ArticleController = {
         const collections = await KulineryDB.findDatas({
             table_name: "articles",
             filter: {
-                category: { $eq: category_slug }
+                "category.slug": { $eq: category_slug }
             },
             options: {
                 limit: dataPerPage,
+                projection: {
+                    _id: 0,
+                    slug: 1,
+                    title: 1,
+                    thumbnail: 1,
+                    category: 1,
+                }
             }
         })
 
         const collectionTotal = collections.length || 0
+        const totalDocs = await KulineryDB.getTotalItem({
+            table_name: tableName,
+            filter: {
+                "category.slug": { $eq: category_slug }
+            },
+        }) || 0
+        const totalPages = Math.ceil(totalDocs / dataPerPage)
 
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
                 status: true,
+                pages: totalPages,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, `/api/articles/category/${category_slug}`)
-            const { results } = response.data
-
             res.status(200).json({
                 method: req.method,
-                status: true,
-                results
+                status: false,
+                pages: totalPages,
+                results: collections
             })
         }
     },
     getArticlesByCategoryOnPage: async (req, res) => {
-        const page = req.params.page
+        let { page } = req.params
+        if (page >= 1) {
+            page -= 1
+        } else {
+            page = 0
+        }
         const category_slug = req.params.category_slug
         const collections = await KulineryDB.findDatas({
             table_name: "articles",
             filter: {
-                category: { $eq: category_slug }
+                "category.slug": { $eq: category_slug }
             },
             options: {
                 limit: dataPerPage,
                 skip: dataPerPage * page,
+                projection: {
+                    _id: 0,
+                    slug: 1,
+                    title: 1,
+                    thumbnail: 1,
+                    category: 1,
+                }
             }
         })
 
         const collectionTotal = collections.length || 0
+        const totalDocs = await KulineryDB.getTotalItem({
+            table_name: tableName,
+            filter: {
+                "category.slug": { $eq: category_slug }
+            },
+        }) || 0
+        const totalPages = Math.ceil(totalDocs / dataPerPage)
 
         if (collectionTotal >= 1) {
             res.status(200).json({
                 method: req.method,
                 status: true,
+                pages: totalPages,
                 results: collections
             })
         } else {
-            const response = await getResepnya(req, res, `/api/articles/category/${category_slug}/${page}`)
-            const { results } = response.data
-
             res.status(200).json({
                 method: req.method,
-                status: true,
-                results
+                status: false,
+                pages: totalPages,
+                results: collections
             })
         }
     },
