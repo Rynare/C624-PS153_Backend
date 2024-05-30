@@ -117,6 +117,17 @@ const RecipesController = {
 
     getRecipesBySearch: async (req, res) => {
         const keyword = req.params.keyword
+        if (!keyword) {
+            return res.status(400).json({
+                method: req.method,
+                status: false,
+                pages: 0,
+                results: {
+                    error: "Error!",
+                    message: "Keyword query parameter is required."
+                }
+            });
+        }
 
         const collections = await KulineryDB.findDatas({
             table_name: "recipes",
@@ -176,13 +187,26 @@ const RecipesController = {
     },
 
     getRecipesBySearchOnPage: async (req, res) => {
+        const keyword = req.params.keyword
+
+        if (!keyword) {
+            return res.status(400).json({
+                method: req.method,
+                status: false,
+                pages: 0,
+                results: {
+                    error: "Error!",
+                    message: "Keyword query parameter is required."
+                }
+            });
+        }
+
         let { page } = req.params
         if (page >= 1) {
             page -= 1
         } else {
             page = 0
         }
-        const keyword = req.params.keyword
 
         const collections = await KulineryDB.findDatas({
             table_name: "recipes",
