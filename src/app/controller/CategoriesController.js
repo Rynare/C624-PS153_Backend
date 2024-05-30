@@ -21,7 +21,10 @@ const CategoriesController = {
             return res.status(500).json({
                 method: req.method,
                 status: false,
-                results: response
+                results: {
+                    error: "Error!",
+                    message: "Terjadi masalah pada server."
+                }
             })
         }
     },
@@ -44,7 +47,10 @@ const CategoriesController = {
             return res.status(500).json({
                 method: req.method,
                 status: false,
-                results: response
+                results: {
+                    error: "Error!",
+                    message: "Terjadi masalah pada server."
+                }
             })
         }
     }
