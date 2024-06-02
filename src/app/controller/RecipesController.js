@@ -25,19 +25,12 @@ const RecipesController = {
             clasifyCalories(calories),
             calories + "Kkal"
         ]
-        const { name: authorName } = await KulineryDB.findData({
-            table_name: "users",
-            filter: {
-                uid: { $eq: uid },
-                email: { $eq: email }
-            }
-        })
         const newRecipes = await KulineryDB.insertData({
             table_name: "recipes",
             data: {
                 slug,
                 title: sanitizeReq(title),
-                author: authorName,
+                author: email,
                 datepublished: moment().toISOString(),
                 description: sanitizeReq(desc),
                 duration,
@@ -399,11 +392,20 @@ const RecipesController = {
             }
         })
 
+        const { name } = await KulineryDB.findData({
+            table_name: "users",
+            filter: {
+                email: { $eq: collections.email }
+            }
+        }) || { name: collections.author }
         if (collections) {
             res.status(200).json({
                 method: req.method,
                 status: true,
-                results: collections
+                results: {
+                    ...collections,
+                    author: name
+                }
             })
         } else {
             res.status(404).json({
