@@ -70,6 +70,31 @@ const PopularController = {
         const popularArticles = articles.aggregate([
             {
                 $lookup: {
+                    from: "users",
+                    localField: "author",
+                    foreignField: "uid",
+                    as: "user_info"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$user_info",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $addFields: {
+                    author_name: {
+                        $cond: {
+                            if: { $ne: ["$user_info.name", null] },
+                            then: "$author",
+                            else: "$user_info.name"
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
                     from: "article_likes",
                     localField: "_id",
                     foreignField: "id_article",
@@ -84,6 +109,7 @@ const PopularController = {
                     title: { $first: "$title" },
                     thumbnail: { $first: "$thumbnail" },
                     category: { $first: "$category" },
+                    author: { $first: "$author_name" }
                 }
             },
             {
@@ -99,6 +125,7 @@ const PopularController = {
                     title: 1,
                     thumbnail: 1,
                     category: 1,
+                    author: 1,
                     likes: "$likeCount"
                 }
             }
