@@ -252,6 +252,6 @@ const ArticleController = {
                 results: collections
             })
         }
-    },
+    },  
 }
 module.exports = { ArticleController }
