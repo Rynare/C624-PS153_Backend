@@ -2,7 +2,7 @@ const { getResepnya } = require("../../services/fetchResepnya")
 const { cloudinary } = require("../../utils/cloudinary")
 const { KulineryDB } = require("../database/KulineryDB")
 const { sanitizeReq } = require("../../helper/sanitizeFromXSS")
-const { response } = require("express")
+const { response, json } = require("express")
 const moment = require("moment")
 
 const dataPerPage = 12
@@ -52,38 +52,103 @@ const ArticleController = {
         }
     },
     getArticles: async (req, res) => {
-        const collections = await KulineryDB.findDatas({
-            table_name: tableName,
-            options: {
-                limit: dataPerPage,
-                projection: {
-                    _id: 0,
-                    slug: 1,
-                    title: 1,
-                    thumbnail: 1,
-                    category: 1,
+        try {
+            const db = KulineryDB.getConnection()
+            const articles = db.collection("articles")
+            const collections = articles.aggregate([
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "author",
+                        foreignField: "uid",
+                        as: "user_info"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$user_info",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        author_name: {
+                            $cond: {
+                                if: { $ne: ["$user_info.name", null] },
+                                then: "$author",
+                                else: "$user_info.name"
+                            }
+                        }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "article_likes",
+                        localField: "_id",
+                        foreignField: "id_article",
+                        as: "likes"
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        likeCount: { $sum: { $size: "$likes" } },
+                        slug: { $first: "$slug" },
+                        title: { $first: "$title" },
+                        thumbnail: { $first: "$thumbnail" },
+                        category: { $first: "$category" },
+                        author: { $first: "$author_name" },
+                        datePublished: { $first: "$datePublished" }
+                    }
+                },
+                {
+                    $sort: { datePublished: -1, title: 1 }
+                },
+                {
+                    $limit: dataPerPage
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        slug: 1,
+                        title: 1,
+                        thumbnail: 1,
+                        category: 1,
+                        author: 1,
+                        likes: "$likeCount"
+                    }
                 }
+            ]);
+
+            const articleArr = await collections.toArray();
+            const collectionTotal = articleArr.length || 0
+            const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+            const totalPages = Math.ceil(totalDocs / dataPerPage)
+
+            if (collectionTotal >= 1) {
+                res.status(200).json({
+                    method: req.method,
+                    pages: totalPages,
+                    status: true,
+                    results: articleArr
+                })
+            } else {
+                res.status(200).json({
+                    method: req.method,
+                    pages: totalPages,
+                    status: false,
+                    results: articleArr
+                })
             }
-        })
-
-        const collectionTotal = collections.length || 0
-        const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
-        const totalPages = Math.ceil(totalDocs / dataPerPage)
-
-        if (collectionTotal >= 1) {
-            res.status(200).json({
+        } catch (error) {
+            res.status(500).json({
                 method: req.method,
-                pages: totalPages,
-                status: true,
-                results: collections
-            })
-        } else {
-            res.status(200).json({
-                method: req.method,
-                pages: totalPages,
                 status: false,
-                results: collections
-            })
+                results: {
+                    error: "internal server error!",
+                    message: "Gagal mendapatkan daftar artikel.",
+                }
+            });
         }
     },
     getArticleDetail: async (req, res) => {
@@ -122,40 +187,107 @@ const ArticleController = {
         } else {
             page = 0
         }
-
-        const collections = await KulineryDB.findDatas({
-            table_name: "articles",
-            options: {
-                limit: dataPerPage,
-                skip: dataPerPage * page,
-                projection: {
-                    _id: 0,
-                    slug: 1,
-                    title: 1,
-                    thumbnail: 1,
-                    category: 1,
+        try {
+            const db = KulineryDB.getConnection()
+            const articles = db.collection("articles")
+            const collections = articles.aggregate([
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "author",
+                        foreignField: "uid",
+                        as: "user_info"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$user_info",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        author_name: {
+                            $cond: {
+                                if: { $ne: ["$user_info.name", null] },
+                                then: "$author",
+                                else: "$user_info.name"
+                            }
+                        }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "article_likes",
+                        localField: "_id",
+                        foreignField: "id_article",
+                        as: "likes"
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        likeCount: { $sum: { $size: "$likes" } },
+                        slug: { $first: "$slug" },
+                        title: { $first: "$title" },
+                        thumbnail: { $first: "$thumbnail" },
+                        category: { $first: "$category" },
+                        author: { $first: "$author_name" },
+                        datePublished: { $first: "$datePublished" }
+                    }
+                },
+                {
+                    $sort: { datePublished: -1, title: 1 }
+                },
+                {
+                    $skip: dataPerPage * page
+                },
+                {
+                    $limit: dataPerPage
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        slug: 1,
+                        title: 1,
+                        thumbnail: 1,
+                        category: 1,
+                        author: 1,
+                        likes: "$likeCount"
+                    }
                 }
+            ]);
+
+            const articleArr = await collections.toArray();
+            const collectionTotal = articleArr.length || 0
+            const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+            const totalPages = Math.ceil(totalDocs / dataPerPage)
+
+            if (collectionTotal >= 1) {
+                res.status(200).json({
+                    method: req.method,
+                    pages: totalPages,
+                    status: true,
+                    results: articleArr
+                })
+            } else {
+                res.status(200).json({
+                    method: req.method,
+                    pages: totalPages,
+                    status: false,
+                    results: articleArr
+                })
             }
-        })
-
-        const collectionTotal = collections.length || 0
-        const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
-        const totalPages = Math.ceil(totalDocs / dataPerPage)
-
-        if (collectionTotal >= 1) {
-            res.status(200).json({
+        } catch (error) {
+            res.status(500).json({
                 method: req.method,
-                pages: totalPages,
-                status: true,
-                results: collections
-            })
-        } else {
-            res.status(200).json({
-                method: req.method,
-                pages: totalPages,
                 status: false,
-                results: collections
-            })
+                results: {
+                    error: "internal server error!",
+                    message: "Gagal mendapatkan daftar artikel.",
+                    er: JSON.stringify(error)
+                }
+            });
         }
     },
     getArticlesByCategory: async (req, res) => {
@@ -252,6 +384,6 @@ const ArticleController = {
                 results: collections
             })
         }
-    },  
+    },
 }
 module.exports = { ArticleController }
