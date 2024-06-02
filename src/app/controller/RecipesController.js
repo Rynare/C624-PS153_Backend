@@ -51,40 +51,82 @@ const RecipesController = {
     },
 
     getRecipes: async (req, res) => {
-        const collections = await KulineryDB.findDatas({
-            table_name: "recipes",
-            options: {
-                limit: dataPerPage,
-                projection: {
-                    _id: 0,
-                    slug: 1,
-                    title: 1,
-                    thumbnail: 1,
-                    duration: 1,
-                    difficulty: 1,
-                    calories: 1,
+        try {
+            const db = KulineryDB.getConnection()
+            const recipes = db.collection(tableName)
+            const collections = recipes.aggregate([
+                {
+                    $lookup: {
+                        from: "recipe_likes",
+                        localField: "_id",
+                        foreignField: "id_recipe",
+                        as: "likes"
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        likeCount: { $sum: { $size: "$likes" } },
+                        slug: { $first: "$slug" },
+                        title: { $first: "$title" },
+                        thumbnail: { $first: "$thumbnail" },
+                        duration: { $first: "$duration" },
+                        difficulty: { $first: "$difficulty" },
+                        calories: { $first: "$calories" }
+                    }
+                },
+                {
+                    $sort: {
+                        datePublished: - 1,
+                        title: 1
+                    }
+                },
+                {
+                    $limit: dataPerPage
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        slug: 1,
+                        title: 1,
+                        thumbnail: 1,
+                        duration: 1,
+                        difficulty: 1,
+                        calories: 1,
+                        likes: "$likeCount"
+                    }
                 }
+            ]);
+
+            const collectionsArr = await collections.toArray();
+            const collectionTotal = collectionsArr.length || 0
+            const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+            const totalPages = Math.ceil(totalDocs / dataPerPage)
+
+            if (collectionTotal >= 1) {
+                res.status(200).json({
+                    method: req.method,
+                    status: true,
+                    pages: totalPages,
+                    results: collectionsArr
+                })
+            } else {
+                res.status(200).json({
+                    method: req.method,
+                    status: false,
+                    pages: totalPages,
+                    results: collectionsArr
+                })
             }
-        })
-
-        const collectionTotal = collections.length || 0
-        const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
-        const totalPages = Math.ceil(totalDocs / dataPerPage)
-
-        if (collectionTotal >= 1) {
-            res.status(200).json({
-                method: req.method,
-                status: true,
-                pages: totalPages,
-                results: collections
-            })
-        } else {
-            res.status(200).json({
+        } catch (error) {
+            res.status(500).json({
                 method: req.method,
                 status: false,
-                pages: totalPages,
-                results: collections
-            })
+                results: {
+                    error: "Internal server error!",
+                    message: "Gagal mendapatkan daftar resep."
+                }
+            });
         }
     },
 
@@ -95,41 +137,85 @@ const RecipesController = {
         } else {
             page = 0
         }
-        const collections = await KulineryDB.findDatas({
-            table_name: "recipes",
-            options: {
-                limit: dataPerPage,
-                skip: dataPerPage * page,
-                projection: {
-                    _id: 0,
-                    slug: 1,
-                    title: 1,
-                    thumbnail: 1,
-                    duration: 1,
-                    difficulty: 1,
-                    calories: 1,
+        try {
+            const db = KulineryDB.getConnection()
+            const recipes = db.collection(tableName)
+            const collections = recipes.aggregate([
+                {
+                    $lookup: {
+                        from: "recipe_likes",
+                        localField: "_id",
+                        foreignField: "id_recipe",
+                        as: "likes"
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        likeCount: { $sum: { $size: "$likes" } },
+                        slug: { $first: "$slug" },
+                        title: { $first: "$title" },
+                        thumbnail: { $first: "$thumbnail" },
+                        duration: { $first: "$duration" },
+                        difficulty: { $first: "$difficulty" },
+                        calories: { $first: "$calories" }
+                    }
+                },
+                {
+                    $sort: {
+                        datePublished: -1,
+                        title: 1
+                    }
+                },
+                {
+                    $skip: dataPerPage * page,
+                },
+                {
+                    $limit: dataPerPage,
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        slug: 1,
+                        title: 1,
+                        thumbnail: 1,
+                        duration: 1,
+                        difficulty: 1,
+                        calories: 1,
+                        likes: "$likeCount"
+                    }
                 }
+            ]);
+
+            const collectionsArr = await collections.toArray();
+            const collectionTotal = collectionsArr.length || 0
+            const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+            const totalPages = Math.ceil(totalDocs / dataPerPage)
+
+            if (collectionTotal >= 1) {
+                res.status(200).json({
+                    method: req.method,
+                    status: true,
+                    pages: totalPages,
+                    results: collectionsArr
+                })
+            } else {
+                res.status(200).json({
+                    method: req.method,
+                    status: false,
+                    pages: totalPages,
+                    results: collectionsArr
+                })
             }
-        })
-
-        const collectionTotal = collections.length || 0
-        const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
-        const totalPages = Math.ceil(totalDocs / dataPerPage)
-
-        if (collectionTotal >= 1) {
-            res.status(200).json({
-                method: req.method,
-                status: true,
-                pages: totalPages,
-                results: collections
-            })
-        } else {
-            res.status(200).json({
+        } catch (error) {
+            res.status(500).json({
                 method: req.method,
                 status: false,
-                pages: totalPages,
-                results: collections
-            })
+                results: {
+                    error: "Internal server error!",
+                    message: "Gagal mendapatkan daftar resep."
+                }
+            });
         }
     },
 
@@ -414,7 +500,7 @@ const RecipesController = {
                 results: []
             })
         }
-    }
+    },
 }
 
 module.exports = { RecipesController }
