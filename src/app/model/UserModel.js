@@ -10,6 +10,9 @@ const UserModel = [
     body("name")
         .notEmpty().withMessage("Name tidak boleh kosong")
         .isString().withMessage("Name harus berupa text"),
+    body("profilePicture")
+        .notEmpty().withMessage("profilePicture tidak boleh kosong")
+        .isURL().withMessage("profilePicture harus berupa url"),
 ]
 
 module.exports = { UserModel }

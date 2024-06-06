@@ -12,6 +12,7 @@ const { AuthController } = require('../app/controller/AuthController');
 const { UserModel } = require('../app/model/UserModel');
 const { SlugController } = require('../app/controller/SlugController');
 const { PopularController } = require('../app/controller/PopularController');
+const { isLogin } = require('../app/middleware/isLogin');
 
 route.get(['/', '/api'], (req, res) => {
     res.json({
@@ -27,8 +28,9 @@ route.get(['/', '/api'], (req, res) => {
     });
 });
 
-route.post("/api/user", UserModel, validationHandler, AuthController.postNewUser)
-route.get("/api/user", AuthController.getUser)
+route.post("/api/auth", UserModel, validationHandler, AuthController.postNewUser)
+route.get("/api/user/:id", isLogin,AuthController.getUser)
+route.get("/api/my-profile/:uid/:email", isLogin,AuthController.getUser)
 
 route.get("/api/recipes/categories", CategoriesController.getRecipesCategory)
 route.get("/api/articles/categories", CategoriesController.getArticleCategory)
@@ -36,7 +38,7 @@ route.get("/api/articles/categories", CategoriesController.getArticleCategory)
 route.get("/api/recipe-check-slug/:slug", SlugController.recipe)
 route.get("/api/article-check-slug/:slug", SlugController.article)
 
-route.post("/api/recipe", RecipeModel, validationHandler, uploadThis.single("thumbnail"), handleMulterError, RecipesController.postRecipe)
+route.post("/api/recipe", isLogin,RecipeModel, validationHandler, uploadThis.single("thumbnail"), handleMulterError, RecipesController.postRecipe)
 route.get("/api/recipes", RecipesController.getRecipes)
 route.get("/api/recipes/page/:page", RecipesController.getRecipesOnPage)
 route.get("/api/recipes/search/:keyword", RecipesController.getRecipesBySearch)
@@ -45,17 +47,17 @@ route.get("/api/recipe/detail/:slug", RecipesController.getRecipeDetail)
 route.get("/api/recipes/category/:category_slug", RecipesController.getRecipesByCategory)
 route.get("/api/recipes/category/:category_slug/:page", RecipesController.getRecipesByCategoryOnPage)
 
-route.post("/api/article/", ArticleModel, validationHandler, uploadThis.single("thumbnail"), handleMulterError, ArticleController.postArticle)
+route.post("/api/article/", isLogin,ArticleModel, validationHandler, uploadThis.single("thumbnail"), handleMulterError, ArticleController.postArticle)
 route.get("/api/articles/", ArticleController.getArticles)
 route.get("/api/articles/page/:page", ArticleController.getArticlesOnPage)
 route.get("/api/articles/category/:category_slug", ArticleController.getArticlesByCategory)
 route.get("/api/articles/category/:category_slug/:page", ArticleController.getArticlesByCategoryOnPage)
 route.get("/api/article/detail/:slug", ArticleController.getArticleDetail)
 
-route.get("/api/recipe/comments/:slug/:nth_page", CommentController.getRecipeComments)
-route.get("/api/article/comments/:slug/:nth_page", CommentController.getArticleComments)
-route.post("/api/recipe/comments/:slug/", CommentController.postRecipeComment)
-route.post("/api/article/comments/:slug/", CommentController.postArticleComment)
+route.get("/api/recipe/comments/:id_recipe/:nth_page", CommentController.getRecipeComments)
+route.get("/api/article/comments/:id_article/:nth_page", CommentController.getArticleComments)
+route.post("/api/recipe/comments/:id_recipe",isLogin,CommentModel ,validationHandler ,CommentController.postRecipeComment)
+route.post("/api/article/comments/:id_article",isLogin,CommentModel ,validationHandler ,CommentController.postArticleComment)
 
 route.get("/api/popular-articles", PopularController.topArticles)
 route.get("/api/popular-recipes", PopularController.topRecipes)
