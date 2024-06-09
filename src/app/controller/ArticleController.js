@@ -4,6 +4,7 @@ const { KulineryDB } = require("../database/KulineryDB")
 const { sanitizeReq } = require("../../helper/sanitizeFromXSS")
 const { response, json } = require("express")
 const moment = require("moment")
+const { ObjectId } = require("mongodb")
 
 const dataPerPage = 12
 const tableName = "articles";
@@ -153,30 +154,98 @@ const ArticleController = {
     },
     getArticleDetail: async (req, res) => {
         const slug = req.params.slug
+        let id_user = req.query.user
 
-        const collections = await KulineryDB.findData({
-            table_name: "articles",
-            filter: {
-                slug: { $eq: slug }
+        const db = KulineryDB.getConnection()
+        const table = db.collection("articles")
+        const rawArticleDetail = table.aggregate([
+            {
+                $match: {
+                    slug: slug,
+                }
             },
-            options: {
-                projection: {
-                    _id: 0,
+            {
+                $lookup: {
+                    from: "article_likes",
+                    localField: "_id",
+                    foreignField: "id_article",
+                    as: "likes"
+                }
+            },
+            {
+                $lookup: {
+                    from: "article_comments",
+                    localField: "_id",
+                    foreignField: "id_article",
+                    as: "comments"
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "author",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$user",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $addFields: {
+                    likeCount: { $sum: { $size: "$likes" } },
+                    commentCount: { $sum: { $size: "$comments" } },
+                    authorName: {
+                        $ifNull: [{ $arrayElemAt: ["$user.name", 0] }, "$author"]
+                    },
+                }
+            },
+            {
+                $project: {
+                    comments: 0,
+                    likes: 0,
+                    author: 0,
                 }
             }
-        })
+        ])
 
-        if (collections) {
+        const collections = await rawArticleDetail.toArray()
+
+        let isLiked = false
+        if (id_user) {
+            try {
+                id_user = ObjectId.createFromHexString(req.query.user)
+                if (await KulineryDB.findData({
+                    table_name: "article_likes",
+                    filter: {
+                        id_user,
+                        id_article: collections[0]._id
+                    }
+                })) {
+                    isLiked = true
+                }
+            } catch (error) {
+                isLiked = false
+            }
+        }
+
+        if (collections.length >= 1) {
             res.status(200).json({
                 method: req.method,
                 status: true,
-                results: collections
+                results: {
+                    ...collections[0],
+                    isLiked
+                }
             })
         } else {
             res.status(404).json({
                 method: req.method,
                 status: false,
-                results: collections
+                results: collections[0]
             })
         }
     },

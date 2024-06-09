@@ -1,3 +1,4 @@
+const { ObjectId } = require("mongodb")
 const { sanitizeReq } = require("../../helper/sanitizeFromXSS")
 const { getResepnya } = require("../../services/fetchResepnya")
 const { cloudinary } = require("../../utils/cloudinary")
@@ -465,39 +466,97 @@ const RecipesController = {
 
     getRecipeDetail: async (req, res) => {
         const { slug } = req.params
-
-        const collections = await KulineryDB.findData({
-            table_name: "recipes",
-            filter: {
-                "slug": { $eq: slug }
+        let id_user = req.query.user
+        const db = KulineryDB.getConnection()
+        const table = db.collection("recipes")
+        const recipesAggr = table.aggregate([
+            {
+                $match: {
+                    slug: slug,
+                }
             },
-            options: {
-                projection: {
-                    _id: 0,
+            {
+                $lookup: {
+                    from: "recipe_likes",
+                    localField: "_id",
+                    foreignField: "id_recipe",
+                    as: "likes"
+                }
+            },
+            {
+                $lookup: {
+                    from: "recipe_comments",
+                    localField: "_id",
+                    foreignField: "id_recipe",
+                    as: "comments"
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "author",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$user",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $addFields: {
+                    likeCount: { $sum: { $size: "$likes" } },
+                    commentCount: { $sum: { $size: "$comments" } },
+                    authorName: {
+                        $ifNull: [{ $arrayElemAt: ["$user.name", 0] }, "$author"]
+                    },
+                }
+            },
+            {
+                $project: {
+                    comments: 0,
+                    likes: 0,
+                    author: 0
                 }
             }
-        })
+        ])
 
-        const { name } = await KulineryDB.findData({
-            table_name: "users",
-            filter: {
-                email: { $eq: collections.email }
+        const collections = await recipesAggr.toArray()
+
+        let isLiked = false
+        if (id_user) {
+            try {
+                id_user = ObjectId.createFromHexString(req.query.user)
+                if (await KulineryDB.findData({
+                    table_name: "recipe_likes",
+                    filter: {
+                        id_user,
+                        id_recipe: collections[0]._id
+                    }
+                })) {
+                    isLiked = true
+                }
+            } catch (error) {
+                isLiked = false
             }
-        }) || { name: collections.author }
-        if (collections) {
+        }
+
+        if (collections.length >= 1) {
             res.status(200).json({
                 method: req.method,
                 status: true,
                 results: {
-                    ...collections,
-                    author: name
+                    ...collections[0],
+                    isLiked
                 }
             })
         } else {
             res.status(404).json({
                 method: req.method,
                 status: false,
-                results: []
+                results: collections[0]
             })
         }
     },

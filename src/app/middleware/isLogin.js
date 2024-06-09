@@ -1,4 +1,5 @@
-const { KulineryDB } = require("../database/KulineryDB")
+const { ObjectId } = require("mongodb");
+const { KulineryDB } = require("../database/KulineryDB");
 
 async function isLogin(req, res, next) {
     const { id_user, email, uid } = req.body;
@@ -7,12 +8,11 @@ async function isLogin(req, res, next) {
         const user = await KulineryDB.findDatas({
             table_name: "users",
             filter: {
-                _id: id_user,
-                email: email,
-                uid: uid
+                _id: ObjectId.createFromHexString(id_user),
+                email,
+                uid
             }
         });
-
         if (!user || user.length === 0) {
             return res.status(401).json({
                 status: false,
@@ -31,4 +31,4 @@ async function isLogin(req, res, next) {
     }
 }
 
-module.exports = {isLogin}
+module.exports = { isLogin }
