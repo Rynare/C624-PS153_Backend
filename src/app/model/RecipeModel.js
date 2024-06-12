@@ -20,49 +20,20 @@ const RecipeModel = [
     body("title")
         .notEmpty().withMessage("Title tidak boleh kosong.")
         .isString().withMessage("Title harus berupa string."),
-    body("author")
-        .notEmpty().withMessage("Author tidak boleh kosong.")
-        .isArray({ min: 2, max: 2 }).withMessage("Author harus berupa array yang berisi uid dan email")
-        .custom(async value => {
-            if (!Array.isArray(value) || value.length !== 2) {
-                throw new Error("Author harus berupa array yang berisi uid dan email");
-            }
-
-            const [uid, email] = value;
-
-            const authorUID = await KulineryDB.findData({
-                table_name: "users",
-                filter: {
-                    uid: { $eq: uid },
-                    email: { $eq: email }
-                }
-            });
-
-            if (!authorUID) {
-                throw new Error("Tindakan dilarang! Pastikan anda telah login.");
-            }
-
-            return true;
-        }),
-    body("datePublished")
-        .notEmpty().withMessage("DatePublished tidak boleh kosong.")
-        .custom(value => {
-            if (!isISO8601(value)) {
-                throw new Error("DatePublished harus berupa tanggal yang valid (format ISO 8601).");
-            }
-            return true;
-        }),
     body("description")
         .notEmpty().withMessage("Description tidak boleh kosong.")
         .isString().withMessage("Description harus berupa string."),
     body("duration")
         .notEmpty().withMessage("Duration tidak boleh kosong.")
         .isIn(["00:30:00", "00:45:00", "01:00:00", "01:00:01"]),
+    body("difficulty")
+        .notEmpty().withMessage("Difficulty tidak boleh kosong.")
+        .isIn(["easy","medium","hard"]).withMessage("Difficulty harus berisi easy, medium atau hard"),
     body("calories")
         .isInt().withMessage("Calories harus berupa integer"),
     body("portion")
         .notEmpty().withMessage("Portion tidak boleh kosong.")
-        .isInt({ min: 1, max: 10 }).withMessage("Portion harus berupa angka positif."),
+        .isInt({ min: 1, max: 10 }).withMessage("Portion min:1 dan max: 10"),
     body("ingredients")
         .isArray({ min: 1 }).withMessage("Ingredients harus berupa array dan tidak boleh kosong.")
         .custom(ingredients => {
@@ -97,4 +68,12 @@ const RecipeModel = [
         })
 ];
 
-module.exports = { RecipeModel };
+function preparingNewRecipeData(req, res, next) {
+    req.body.tips = JSON.parse(req.body.tips)
+    req.body.ingredients = JSON.parse(req.body.ingredients)
+    req.body.steps = JSON.parse(req.body.steps)
+    req.body.tags = JSON.parse(req.body.tags)
+    next()
+}
+
+module.exports = { RecipeModel, preparingNewRecipeData };

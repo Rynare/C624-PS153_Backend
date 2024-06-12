@@ -22,9 +22,6 @@ const ArticleModel = [
     body("category")
         .notEmpty().withMessage("category tidak boleh kosong.")
         .isIn(["uncategorized", "tips-masak", "inspirasi-dapur", "makanan-gaya-hidup", "resep-lezat-anti-sisa"]).withMessage("category tidak valid."),
-    body("author")
-        .notEmpty().withMessage("author tidak boleh kosong.")
-        .isString().withMessage("author harus berupa string."),
     body("description")
         .notEmpty().withMessage("description tidak boleh kosong.")
         .isString().withMessage("description harus berupa string"),

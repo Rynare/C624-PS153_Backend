@@ -11,45 +11,69 @@ const tableName = "articles";
 
 const ArticleController = {
     postArticle: async (req, res) => {
-        const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
-        const { secure_url } = imgUploadResult
-        const { author, description, title, slug, category: categorySlug } = req.body
-        const getCategoryName = (catSlug) => catSlug.split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ')
-
-        category = {
-            "categorySlug": category,
-            "categoryName": getCategoryName(categorySlug),
-        }
-
-        const newArticle = await KulineryDB.insertData({
-            table_name: "articles",
-            data: {
-                slug,
-                title: sanitizeReq(title),
-                thumbnail: secure_url,
-                author: sanitizeReq(author),
-                datepublished: moment().toISOString(),
-                description: sanitizeReq(description),
-                category,
+        try {
+            if (!req.file) {
+                return res.status(400).json({
+                    method: req.method,
+                    status: false,
+                    message: "File thumbnail harus disertakan."
+                });
             }
-        })
-        if (newArticle) {
-            res.status(201).json({
-                method: req.method,
-                status: true,
-                results: newArticle
-            })
-        } else {
-            res.status(500).json({
+
+            const imgUploadResult = await cloudinary.uploader.upload(req.file.path);
+            const { secure_url } = imgUploadResult;
+
+            const { description, title, slug, category: categorySlug } = req.body;
+
+            const getCategoryName = (catSlug) => catSlug.split('-')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+
+            console.log(req.user._id);
+
+            const category = {
+                "slug": categorySlug,
+                "name": getCategoryName(categorySlug),
+            };
+
+            const newArticle = await KulineryDB.insertData({
+                table_name: "articles",
+                data: {
+                    slug,
+                    title: sanitizeReq(title),
+                    thumbnail: secure_url,
+                    id_user: req.user._id,
+                    datePublished: moment().toISOString(),
+                    description: sanitizeReq(description),
+                    category,
+                }
+            });
+
+            if (newArticle) {
+                return res.status(201).json({
+                    method: req.method,
+                    status: true,
+                    results: newArticle
+                });
+            } else {
+                return res.status(500).json({
+                    method: req.method,
+                    status: false,
+                    results: {
+                        error: "Error",
+                        message: "Gagal menambahkan artikel baru. Terjadi kendala pada server kami."
+                    }
+                });
+            }
+        } catch (error) {
+            return res.status(500).json({
                 method: req.method,
                 status: false,
                 results: {
                     error: "Error",
-                    message: "Gagal menambahkan artikel baru. Terjadi kendala pada server kammi."
+                    message: error.message
                 }
-            })
+            });
         }
     },
     getArticles: async (req, res) => {
@@ -60,24 +84,30 @@ const ArticleController = {
                 {
                     $lookup: {
                         from: "users",
-                        localField: "author",
-                        foreignField: "uid",
-                        as: "user_info"
+                        localField: "id_user",
+                        foreignField: "_id",
+                        as: "user"
                     }
                 },
                 {
                     $unwind: {
-                        path: "$user_info",
+                        path: "$user",
                         preserveNullAndEmptyArrays: true
                     }
                 },
                 {
                     $addFields: {
-                        author_name: {
+                        authorName: {
                             $cond: {
-                                if: { $ne: ["$user_info.name", null] },
-                                then: "$author",
-                                else: "$user_info.name"
+                                if: { $gt: [{ $ifNull: ["$user.name", null] }, null] },
+                                then: "$user.name",
+                                else: {
+                                    $cond: {
+                                        if: { $gt: [{ $ifNull: ["$author", null] }, null] },
+                                        then: "$author",
+                                        else: "anonymous"
+                                    }
+                                }
                             }
                         }
                     }
@@ -98,7 +128,7 @@ const ArticleController = {
                         title: { $first: "$title" },
                         thumbnail: { $first: "$thumbnail" },
                         category: { $first: "$category" },
-                        author: { $first: "$author_name" },
+                        author: { $first: "$authorName" },
                         datePublished: { $first: "$datePublished" }
                     }
                 },
@@ -183,7 +213,7 @@ const ArticleController = {
             {
                 $lookup: {
                     from: "users",
-                    localField: "author",
+                    localField: "id_user",
                     foreignField: "_id",
                     as: "user"
                 }
@@ -199,8 +229,18 @@ const ArticleController = {
                     likeCount: { $sum: { $size: "$likes" } },
                     commentCount: { $sum: { $size: "$comments" } },
                     authorName: {
-                        $ifNull: [{ $arrayElemAt: ["$user.name", 0] }, "$author"]
-                    },
+                        $cond: {
+                            if: { $gt: [{ $ifNull: ["$user.name", null] }, null] },
+                            then: "$user.name",
+                            else: {
+                                $cond: {
+                                    if: { $gt: [{ $ifNull: ["$author", null] }, null] },
+                                    then: "$author",
+                                    else: "anonymous"
+                                }
+                            }
+                        }
+                    }
                 }
             },
             {
@@ -208,6 +248,8 @@ const ArticleController = {
                     comments: 0,
                     likes: 0,
                     author: 0,
+                    user: 0,
+                    id_user: 0,
                 }
             }
         ])
@@ -263,24 +305,30 @@ const ArticleController = {
                 {
                     $lookup: {
                         from: "users",
-                        localField: "author",
-                        foreignField: "uid",
-                        as: "user_info"
+                        localField: "id_user",
+                        foreignField: "_id",
+                        as: "user"
                     }
                 },
                 {
                     $unwind: {
-                        path: "$user_info",
+                        path: "$user",
                         preserveNullAndEmptyArrays: true
                     }
                 },
                 {
                     $addFields: {
-                        author_name: {
+                        authorName: {
                             $cond: {
-                                if: { $ne: ["$user_info.name", null] },
-                                then: "$author",
-                                else: "$user_info.name"
+                                if: { $gt: [{ $ifNull: ["$user.name", null] }, null] },
+                                then: "$user.name",
+                                else: {
+                                    $cond: {
+                                        if: { $gt: [{ $ifNull: ["$author", null] }, null] },
+                                        then: "$author",
+                                        else: "anonymous"
+                                    }
+                                }
                             }
                         }
                     }
@@ -301,7 +349,7 @@ const ArticleController = {
                         title: { $first: "$title" },
                         thumbnail: { $first: "$thumbnail" },
                         category: { $first: "$category" },
-                        author: { $first: "$author_name" },
+                        author: { $first: "$authorName" },
                         datePublished: { $first: "$datePublished" }
                     }
                 },
@@ -452,6 +500,256 @@ const ArticleController = {
                 pages: totalPages,
                 results: collections
             })
+        }
+    },
+    getArticlesBySearch: async (req, res) => { 
+        const keyword = req.params.keyword
+        
+        let { page } = req.params
+        if (page >= 1) {
+            page -= 1
+        } else {
+            page = 0
+        }
+        try {
+            const db = KulineryDB.getConnection()
+            const articles = db.collection("articles")
+            const collections = articles.aggregate([
+                {
+                $match: {
+                    $or: [
+                        { title: { $regex: keyword, $options: 'i' } },
+                        { description: { $regex: keyword, $options: 'i' } }
+                    ]
+                }
+            },{
+                    $lookup: {
+                        from: "users",
+                        localField: "id_user",
+                        foreignField: "_id",
+                        as: "user"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$user",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        authorName: {
+                            $cond: {
+                                if: { $gt: [{ $ifNull: ["$user.name", null] }, null] },
+                                then: "$user.name",
+                                else: {
+                                    $cond: {
+                                        if: { $gt: [{ $ifNull: ["$author", null] }, null] },
+                                        then: "$author",
+                                        else: "anonymous"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "article_likes",
+                        localField: "_id",
+                        foreignField: "id_article",
+                        as: "likes"
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        likeCount: { $sum: { $size: "$likes" } },
+                        slug: { $first: "$slug" },
+                        title: { $first: "$title" },
+                        thumbnail: { $first: "$thumbnail" },
+                        category: { $first: "$category" },
+                        author: { $first: "$authorName" },
+                        datePublished: { $first: "$datePublished" }
+                    }
+                },
+                {
+                    $sort: { datePublished: -1, title: 1 }
+                },
+                {
+                    $skip: dataPerPage * page
+                },
+                {
+                    $limit: dataPerPage
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        slug: 1,
+                        title: 1,
+                        thumbnail: 1,
+                        category: 1,
+                        author: 1,
+                        likes: "$likeCount"
+                    }
+                }
+            ]);
+
+            const articleArr = await collections.toArray();
+            const collectionTotal = articleArr.length || 0
+            const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+            const totalPages = Math.ceil(totalDocs / dataPerPage)
+
+            if (collectionTotal >= 1) {
+                res.status(200).json({
+                    method: req.method,
+                    pages: totalPages,
+                    status: true,
+                    results: articleArr
+                })
+            } else {
+                res.status(200).json({
+                    method: req.method,
+                    pages: totalPages,
+                    status: false,
+                    results: articleArr
+                })
+            }
+        } catch (error) {
+            res.status(500).json({
+                method: req.method,
+                status: false,
+                results: {
+                    error: "internal server error!",
+                    message: "Gagal mendapatkan daftar artikel.",
+                    er: JSON.stringify(error)
+                }
+            });
+        }
+    },
+    getArticlesBySearchOnPage: async (req, res) => { 
+        const keyword = req.params.keyword
+        
+        let { page } = req.params
+        if (page >= 1) {
+            page -= 1
+        } else {
+            page = 0
+        }
+        try {
+            const db = KulineryDB.getConnection()
+            const articles = db.collection("articles")
+            const collections = articles.aggregate([
+                {
+                $match: {
+                    $or: [
+                        { title: { $regex: keyword, $options: 'i' } },
+                        { description: { $regex: keyword, $options: 'i' } }
+                    ]
+                }
+            },{
+                    $lookup: {
+                        from: "users",
+                        localField: "id_user",
+                        foreignField: "_id",
+                        as: "user"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$user",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        authorName: {
+                            $cond: {
+                                if: { $gt: [{ $ifNull: ["$user.name", null] }, null] },
+                                then: "$user.name",
+                                else: {
+                                    $cond: {
+                                        if: { $gt: [{ $ifNull: ["$author", null] }, null] },
+                                        then: "$author",
+                                        else: "anonymous"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "article_likes",
+                        localField: "_id",
+                        foreignField: "id_article",
+                        as: "likes"
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        likeCount: { $sum: { $size: "$likes" } },
+                        slug: { $first: "$slug" },
+                        title: { $first: "$title" },
+                        thumbnail: { $first: "$thumbnail" },
+                        category: { $first: "$category" },
+                        author: { $first: "$authorName" },
+                        datePublished: { $first: "$datePublished" }
+                    }
+                },
+                {
+                    $sort: { datePublished: -1, title: 1 }
+                },
+                {
+                    $skip: dataPerPage * page
+                },
+                {
+                    $limit: dataPerPage
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        slug: 1,
+                        title: 1,
+                        thumbnail: 1,
+                        category: 1,
+                        author: 1,
+                        likes: "$likeCount"
+                    }
+                }
+            ]);
+
+            const articleArr = await collections.toArray();
+            const collectionTotal = articleArr.length || 0
+            const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+            const totalPages = Math.ceil(totalDocs / dataPerPage)
+
+            if (collectionTotal >= 1) {
+                res.status(200).json({
+                    method: req.method,
+                    pages: totalPages,
+                    status: true,
+                    results: articleArr
+                })
+            } else {
+                res.status(200).json({
+                    method: req.method,
+                    pages: totalPages,
+                    status: false,
+                    results: articleArr
+                })
+            }
+        } catch (error) {
+            res.status(500).json({
+                method: req.method,
+                status: false,
+                results: {
+                    error: "internal server error!",
+                    message: "Gagal mendapatkan daftar artikel.",
+                    er: JSON.stringify(error)
+                }
+            });
         }
     },
 }

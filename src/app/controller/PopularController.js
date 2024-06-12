@@ -70,24 +70,30 @@ const PopularController = {
                 {
                     $lookup: {
                         from: "users",
-                        localField: "author",
-                        foreignField: "uid",
-                        as: "user_info"
+                        localField: "id_user",
+                        foreignField: "_id",
+                        as: "user"
                     }
                 },
                 {
                     $unwind: {
-                        path: "$user_info",
+                        path: "$user",
                         preserveNullAndEmptyArrays: true
                     }
                 },
                 {
                     $addFields: {
-                        author_name: {
+                        authorName: {
                             $cond: {
-                                if: { $ne: ["$user_info.name", null] },
-                                then: "$author",
-                                else: "$user_info.name"
+                                if: { $gt: [{ $ifNull: ["$user.name", null] }, null] },
+                                then: "$user.name",
+                                else: {
+                                    $cond: {
+                                        if: { $gt: [{ $ifNull: ["$author", null] }, null] },
+                                        then: "$author",
+                                        else: "anonymous"
+                                    }
+                                }
                             }
                         }
                     }
@@ -108,7 +114,7 @@ const PopularController = {
                         title: { $first: "$title" },
                         thumbnail: { $first: "$thumbnail" },
                         category: { $first: "$category" },
-                        author: { $first: "$author_name" }
+                        author: { $first: "$authorName" }
                     }
                 },
                 {

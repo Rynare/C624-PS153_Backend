@@ -3,9 +3,9 @@ const { CategoriesController } = require('../app/controller/CategoriesController
 const { CommentController } = require('../app/controller/CommentController');
 const { RecipesController } = require('../app/controller/RecipesController');
 const { CommentModel } = require('../app/model/CommentModel');
-const { RecipeModel } = require('../app/model/RecipeModel');
+const { RecipeModel, preparingNewRecipeData } = require('../app/model/RecipeModel');
 const { validationHandler } = require("../app/middleware/validationHandler");
-const { uploadThis, handleMulterError } = require('../app/middleware/multerUploader');
+const { uploadThis, handleMulterError, ensureUploadsDirExists } = require('../app/middleware/multerUploader');
 const { ArticleModel } = require('../app/model/ArticleModel');
 const { ArticleController } = require('../app/controller/ArticleController');
 const { AuthController } = require('../app/controller/AuthController');
@@ -42,20 +42,22 @@ route.get("/api/article-check-slug/:slug", SlugController.article)
 route.post("/api/recipe/like/:id_recipe", isLogin, validationHandler, LikesController.recipe)
 route.post("/api/article/like/:id_article", isLogin, validationHandler, LikesController.article)
 
-route.post("/api/recipe", isLogin, RecipeModel, validationHandler, uploadThis.single("thumbnail"), handleMulterError, RecipesController.postRecipe)
+route.post("/api/recipe", ensureUploadsDirExists,uploadThis.single("thumbnail"), handleMulterError, isLogin, preparingNewRecipeData, RecipeModel, validationHandler,  RecipesController.postRecipe)
 route.get("/api/recipes", RecipesController.getRecipes)
 route.get("/api/recipes/page/:page", RecipesController.getRecipesOnPage)
 route.get("/api/recipes/search/:keyword", RecipesController.getRecipesBySearch)
 route.get("/api/recipes/search/:keyword/:page", RecipesController.getRecipesBySearchOnPage)
 route.get("/api/recipe/detail/:slug", RecipesController.getRecipeDetail)
-route.get("/api/recipes/category/:category_slug", RecipesController.getRecipesByCategory)
-route.get("/api/recipes/category/:category_slug/:page", RecipesController.getRecipesByCategoryOnPage)
+// route.get("/api/recipes/category/:category_slug", RecipesController.getRecipesByCategory)
+// route.get("/api/recipes/category/:category_slug/:page", RecipesController.getRecipesByCategoryOnPage)
 
-route.post("/api/article/", isLogin, ArticleModel, validationHandler, uploadThis.single("thumbnail"), handleMulterError, ArticleController.postArticle)
+route.post("/api/article/", ensureUploadsDirExists,uploadThis.single("thumbnail"), handleMulterError, isLogin, ArticleModel, validationHandler,  ArticleController.postArticle)
 route.get("/api/articles/", ArticleController.getArticles)
 route.get("/api/articles/page/:page", ArticleController.getArticlesOnPage)
-route.get("/api/articles/category/:category_slug", ArticleController.getArticlesByCategory)
-route.get("/api/articles/category/:category_slug/:page", ArticleController.getArticlesByCategoryOnPage)
+route.get("/api/articles/search/:keyword", ArticleController.getArticlesBySearch)
+route.get("/api/articles/search/:keyword/:page", ArticleController.getArticlesBySearchOnPage)
+// route.get("/api/articles/category/:category_slug", ArticleController.getArticlesByCategory)
+// route.get("/api/articles/category/:category_slug/:page", ArticleController.getArticlesByCategoryOnPage)
 route.get("/api/article/detail/:slug", ArticleController.getArticleDetail)
 
 route.get("/api/recipe/comments/:id_recipe/:nth_page", CommentController.getRecipeComments)

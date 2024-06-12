@@ -12,8 +12,7 @@ const RecipesController = {
     postRecipe: async (req, res) => {
         const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
         const { secure_url } = imgUploadResult
-        const { slug, title, author, desc, duration, calories, ingredients } = req.body
-        const [uid, email] = author;
+        const { slug, title, description, duration, calories, ingredients, difficulty, portion,steps,tips,tags, } = req.body
         function clasifyCalories(value) {
             if (value >= 500 && value <= 799) {
                 return "medium"
@@ -31,10 +30,11 @@ const RecipesController = {
             data: {
                 slug,
                 title: sanitizeReq(title),
-                author: email,
-                datepublished: moment().toISOString(),
-                description: sanitizeReq(desc),
+                id_user: req.user._id,
+                datePublished: moment().toISOString(),
+                description: sanitizeReq(description),
                 duration,
+                difficulty,
                 calories: calories ? caloriesArr : [],
                 portion,
                 ingredients: ingredients.map(sanitizeReq),
@@ -78,7 +78,7 @@ const RecipesController = {
                 },
                 {
                     $sort: {
-                        datePublished: - 1,
+                        datePublished: -1,
                         title: 1
                     }
                 },
@@ -159,7 +159,8 @@ const RecipesController = {
                         thumbnail: { $first: "$thumbnail" },
                         duration: { $first: "$duration" },
                         difficulty: { $first: "$difficulty" },
-                        calories: { $first: "$calories" }
+                        calories: { $first: "$calories" },
+                        datePublished: { $first: "$datePublished" }
                     }
                 },
                 {
@@ -293,81 +294,100 @@ const RecipesController = {
 
     getRecipesBySearchOnPage: async (req, res) => {
         const keyword = req.params.keyword
-
-        if (!keyword) {
-            return res.status(400).json({
-                method: req.method,
-                status: false,
-                pages: 0,
-                results: {
-                    error: "Error!",
-                    message: "Keyword query parameter is required."
-                }
-            });
-        }
-
-        let { page } = req.params
+let { page } = req.params
         if (page >= 1) {
             page -= 1
         } else {
             page = 0
         }
-
-        const collections = await KulineryDB.findDatas({
-            table_name: "recipes",
-            filter: {
-                $or: [
-                    { title: { $regex: keyword, $options: 'i' } },
-                    { desc: { $regex: keyword, $options: 'i' } },
-                    { ingredients: { $elemMatch: { $regex: keyword, $options: 'i' } } },
-                    { steps: { $elemMatch: { $regex: keyword, $options: 'i' } } },
-                    { tips: { $elemMatch: { $regex: keyword, $options: 'i' } } }
-                ]
-            },
-            options: {
-                limit: dataPerPage,
-                skip: dataPerPage * page,
-                projection: {
-                    _id: 0,
-                    slug: 1,
-                    title: 1,
-                    thumbnail: 1,
-                    duration: 1,
-                    difficulty: 1,
-                    calories: 1,
+        try {
+            const db = KulineryDB.getConnection()
+            const recipes = db.collection(tableName)
+            const collections = recipes.aggregate([
+            {
+                $match: {
+                    $or: [
+                        { title: { $regex: keyword, $options: 'i' } },
+                        { description: { $regex: keyword, $options: 'i' } }
+                    ]
                 }
-            }
-        })
-
-        const collectionTotal = collections.length || 0
-        const totalDocs = await KulineryDB.getTotalItem({
-            table_name: tableName,
-            filter: {
-                $or: [
-                    { title: { $regex: keyword, $options: 'i' } },
-                    { desc: { $regex: keyword, $options: 'i' } },
-                    { ingredients: { $elemMatch: { $regex: keyword, $options: 'i' } } },
-                    { steps: { $elemMatch: { $regex: keyword, $options: 'i' } } },
-                    { tips: { $elemMatch: { $regex: keyword, $options: 'i' } } }
-                ]
             },
-        }) || 0
-        const totalPages = Math.ceil(totalDocs / dataPerPage)
+                {
+                    $lookup: {
+                        from: "recipe_likes",
+                        localField: "_id",
+                        foreignField: "id_recipe",
+                        as: "likes"
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        likeCount: { $sum: { $size: "$likes" } },
+                        slug: { $first: "$slug" },
+                        title: { $first: "$title" },
+                        thumbnail: { $first: "$thumbnail" },
+                        duration: { $first: "$duration" },
+                        difficulty: { $first: "$difficulty" },
+                        calories: { $first: "$calories" },
+                        datePublished: { $first: "$datePublished" }
+                    }
+                },
+                {
+                    $sort: {
+                        datePublished: -1,
+                        title: 1
+                    }
+                },
+                {
+                    $skip: dataPerPage * page,
+                },
+                {
+                    $limit: dataPerPage,
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        slug: 1,
+                        title: 1,
+                        thumbnail: 1,
+                        duration: 1,
+                        difficulty: 1,
+                        calories: 1,
+                        likes: "$likeCount"
+                    }
+                }
+            ]);
 
-        if (collectionTotal >= 1) {
-            res.status(200).json({
-                method: req.method,
-                status: true,
-                pages: totalPages,
-                results: collections
-            })
-        } else {
-            res.status(200).json({
+            const collectionsArr = await collections.toArray();
+            const collectionTotal = collectionsArr.length || 0
+            const totalDocs = await KulineryDB.getTotalItem({ table_name: tableName }) || 0
+            const totalPages = Math.ceil(totalDocs / dataPerPage)
+
+            if (collectionTotal >= 1) {
+                res.status(200).json({
+                    method: req.method,
+                    status: true,
+                    pages: totalPages,
+                    results: collectionsArr
+                })
+            } else {
+                res.status(200).json({
+                    method: req.method,
+                    status: false,
+                    pages: totalPages,
+                    results: collectionsArr
+                })
+            }
+        } catch (error) {
+            res.status(500).json({
                 method: req.method,
                 status: false,
-                pages: totalPages,
-                results: collections
-            })
+                results: {
+                    error: "Internal server error!",
+                    message: "Gagal mendapatkan daftar resep."
+                }
+            });
         }
     },
 
@@ -494,7 +514,7 @@ const RecipesController = {
             {
                 $lookup: {
                     from: "users",
-                    localField: "author",
+                    localField: "id_user",
                     foreignField: "_id",
                     as: "user"
                 }
@@ -510,15 +530,27 @@ const RecipesController = {
                     likeCount: { $sum: { $size: "$likes" } },
                     commentCount: { $sum: { $size: "$comments" } },
                     authorName: {
-                        $ifNull: [{ $arrayElemAt: ["$user.name", 0] }, "$author"]
-                    },
+                        $cond: {
+                            if: { $gt: [{ $ifNull: ["$user.name", null] }, null] },
+                            then: "$user.name",
+                            else: {
+                                $cond: {
+                                    if: { $gt: [{ $ifNull: ["$author", null] }, null] },
+                                    then: "$author",
+                                    else: "anonymous"
+                                }
+                            }
+                        }
+                    }
                 }
             },
             {
                 $project: {
                     comments: 0,
                     likes: 0,
-                    author: 0
+                    author: 0,
+                    id_user: 0,
+                    user: 0,    
                 }
             }
         ])
