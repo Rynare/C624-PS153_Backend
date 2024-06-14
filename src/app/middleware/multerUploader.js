@@ -1,22 +1,24 @@
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { cloudinary } = require("../../utils/cloudinary");
+const path = require('path');
 
-const ensureUploadsDirExists = (req, res, next) => {
-    const uploadsDir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    next();
-};
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, 'uploads'));
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'coba', 
+        format: async (req, file) => {
+            const allowedFormats = ['jpeg', 'jpg', 'webp'];
+            const extname = path.extname(file.originalname).toLowerCase().substring(1);
+            if (!allowedFormats.includes(extname)) {
+                throw new Error('Hanya file JPEG, JPG, dan WEBP yang diizinkan.');
+            }
+            return extname; 
+        },
+        public_id: (req, file) => {
+            return Math.random().toString().substring(2,7) + new Date().toISOString().substring(0,10) + Math.random().toString().substring(2,7);
+        },
     },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
 });
 
 const uploadThis = multer({
@@ -41,4 +43,5 @@ function handleMulterError(err, req, res, next) {
     }
     next();
 }
-module.exports = { uploadThis, handleMulterError, ensureUploadsDirExists }
+
+module.exports = { uploadThis, handleMulterError };

@@ -10,9 +10,14 @@ const tableName = "recipes"
 
 const RecipesController = {
     postRecipe: async (req, res) => {
-        const imgUploadResult = await cloudinary.uploader.upload(req.file.path)
-        const { secure_url } = imgUploadResult
-        const { slug, title, description, duration, calories, ingredients, difficulty, portion,steps,tips,tags, } = req.body
+        if (!req.file) {
+            return res.status(400).json({
+                method: req.method,
+                status: false,
+                message: "File thumbnail harus disertakan."
+            });
+        }
+        const { slug, title, description, duration, calories, ingredients, difficulty, portion, steps, tips, tags, } = req.body
         function clasifyCalories(value) {
             if (value >= 500 && value <= 799) {
                 return "medium"
@@ -41,7 +46,7 @@ const RecipesController = {
                 steps: steps.map(sanitizeReq),
                 tips: tips.length >= 1 ? tips.map(sanitizeReq) : [],
                 tags: tags.length >= 1 ? tags.map(sanitizeReq) : [],
-                thumbnail: secure_url,
+                thumbnail: req.file.path,
             }
         })
         res.status(201).json({
@@ -294,7 +299,7 @@ const RecipesController = {
 
     getRecipesBySearchOnPage: async (req, res) => {
         const keyword = req.params.keyword
-let { page } = req.params
+        let { page } = req.params
         if (page >= 1) {
             page -= 1
         } else {
@@ -304,14 +309,14 @@ let { page } = req.params
             const db = KulineryDB.getConnection()
             const recipes = db.collection(tableName)
             const collections = recipes.aggregate([
-            {
-                $match: {
-                    $or: [
-                        { title: { $regex: keyword, $options: 'i' } },
-                        { description: { $regex: keyword, $options: 'i' } }
-                    ]
-                }
-            },
+                {
+                    $match: {
+                        $or: [
+                            { title: { $regex: keyword, $options: 'i' } },
+                            { description: { $regex: keyword, $options: 'i' } }
+                        ]
+                    }
+                },
                 {
                     $lookup: {
                         from: "recipe_likes",
@@ -550,7 +555,7 @@ let { page } = req.params
                     likes: 0,
                     author: 0,
                     id_user: 0,
-                    user: 0,    
+                    user: 0,
                 }
             }
         ])

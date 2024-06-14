@@ -14,9 +14,10 @@ const { SlugController } = require('../app/controller/SlugController');
 const { PopularController } = require('../app/controller/PopularController');
 const { isLogin } = require('../app/middleware/isLogin');
 const { LikesController } = require('../app/controller/LikesController');
+const { UserActController } = require('../app/controller/UserActController');
 
 route.get(['/', '/api'], (req, res) => {
-    res.json({
+    res.status(200).json({
         method: req.method,
         message: 'Read about API documentation below.',
         documentation: 'https://github.com/Rynare/kulinery-api',
@@ -30,8 +31,10 @@ route.get(['/', '/api'], (req, res) => {
 });
 
 route.post("/api/auth", UserModel, validationHandler, AuthController.postNewUser)
-route.get("/api/user/:id", isLogin, AuthController.getUser)
-route.get("/api/my-profile/:uid/:email", isLogin, AuthController.getUser)
+route.post("/api/my-profile", isLogin, AuthController.getUserInformation)
+route.post("/api/my-profile/update", uploadThis.single("profilePicture"), handleMulterError, isLogin, AuthController.updateUser)
+route.post("/api/user/liked-recipe/:page", isLogin, UserActController.getRecipeLiked)
+route.post("/api/user/liked-article/:page", isLogin, UserActController.getArticleLiked)
 
 route.get("/api/recipes/categories", CategoriesController.getRecipesCategory)
 route.get("/api/articles/categories", CategoriesController.getArticleCategory)
@@ -42,23 +45,21 @@ route.get("/api/article-check-slug/:slug", SlugController.article)
 route.post("/api/recipe/like/:id_recipe", isLogin, validationHandler, LikesController.recipe)
 route.post("/api/article/like/:id_article", isLogin, validationHandler, LikesController.article)
 
-route.post("/api/recipe", ensureUploadsDirExists,uploadThis.single("thumbnail"), handleMulterError, isLogin, preparingNewRecipeData, RecipeModel, validationHandler,  RecipesController.postRecipe)
+route.post("/api/recipe", uploadThis.single("thumbnail"), handleMulterError, isLogin, preparingNewRecipeData, RecipeModel, validationHandler, RecipesController.postRecipe)
 route.get("/api/recipes", RecipesController.getRecipes)
 route.get("/api/recipes/page/:page", RecipesController.getRecipesOnPage)
 route.get("/api/recipes/search/:keyword", RecipesController.getRecipesBySearch)
 route.get("/api/recipes/search/:keyword/:page", RecipesController.getRecipesBySearchOnPage)
 route.get("/api/recipe/detail/:slug", RecipesController.getRecipeDetail)
-// route.get("/api/recipes/category/:category_slug", RecipesController.getRecipesByCategory)
 // route.get("/api/recipes/category/:category_slug/:page", RecipesController.getRecipesByCategoryOnPage)
 
-route.post("/api/article/", ensureUploadsDirExists,uploadThis.single("thumbnail"), handleMulterError, isLogin, ArticleModel, validationHandler,  ArticleController.postArticle)
+route.post("/api/article/", uploadThis.single("thumbnail"), handleMulterError, isLogin, ArticleModel, validationHandler, ArticleController.postArticle)
 route.get("/api/articles/", ArticleController.getArticles)
 route.get("/api/articles/page/:page", ArticleController.getArticlesOnPage)
 route.get("/api/articles/search/:keyword", ArticleController.getArticlesBySearch)
 route.get("/api/articles/search/:keyword/:page", ArticleController.getArticlesBySearchOnPage)
-// route.get("/api/articles/category/:category_slug", ArticleController.getArticlesByCategory)
-// route.get("/api/articles/category/:category_slug/:page", ArticleController.getArticlesByCategoryOnPage)
 route.get("/api/article/detail/:slug", ArticleController.getArticleDetail)
+// route.get("/api/articles/category/:category_slug/:page", ArticleController.getArticlesByCategoryOnPage)
 
 route.get("/api/recipe/comments/:id_recipe/:nth_page", CommentController.getRecipeComments)
 route.get("/api/article/comments/:id_article/:nth_page", CommentController.getArticleComments)

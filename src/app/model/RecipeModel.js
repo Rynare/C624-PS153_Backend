@@ -30,6 +30,7 @@ const RecipeModel = [
         .notEmpty().withMessage("Difficulty tidak boleh kosong.")
         .isIn(["easy","medium","hard"]).withMessage("Difficulty harus berisi easy, medium atau hard"),
     body("calories")
+    .optional()
         .isInt().withMessage("Calories harus berupa integer"),
     body("portion")
         .notEmpty().withMessage("Portion tidak boleh kosong.")
@@ -55,8 +56,18 @@ const RecipeModel = [
             return true;
         }),
     body("tips")
-        .isArray().withMessage("Tips harus berupa array."),
+        .optional()
+        .isArray().withMessage("Tips harus berupa array.")
+    .custom(tips => {
+            tips.forEach(tip => {
+                if (typeof tip !== 'string') {
+                    throw new Error("Setiap tips harus berupa string.");
+                }
+            });
+            return true;
+        }),
     body("tags")
+        .optional()
         .isArray().withMessage("Tags harus berupa array.")
         .custom(tags => {
             tags.forEach(tag => {

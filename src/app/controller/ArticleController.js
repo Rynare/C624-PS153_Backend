@@ -19,10 +19,6 @@ const ArticleController = {
                     message: "File thumbnail harus disertakan."
                 });
             }
-
-            const imgUploadResult = await cloudinary.uploader.upload(req.file.path);
-            const { secure_url } = imgUploadResult;
-
             const { description, title, slug, category: categorySlug } = req.body;
 
             const getCategoryName = (catSlug) => catSlug.split('-')
@@ -41,7 +37,7 @@ const ArticleController = {
                 data: {
                     slug,
                     title: sanitizeReq(title),
-                    thumbnail: secure_url,
+                    thumbnail: req.file.path,
                     id_user: req.user._id,
                     datePublished: moment().toISOString(),
                     description: sanitizeReq(description),

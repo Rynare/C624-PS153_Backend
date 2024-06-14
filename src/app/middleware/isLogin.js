@@ -25,7 +25,11 @@ async function isLogin(req, res, next) {
         res.status(500).json({
             status: false,
             message: "Internal Server Error",
-            error: error.message
+            error: {
+                error_possibilities: "Unprocessible: Invalid auth parameters.",
+                error_atatus: "Unauthorized: User not logged in or invalid credentials.",
+                error_message: error.message,
+            }
         });
     }
 }
