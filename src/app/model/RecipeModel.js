@@ -28,9 +28,9 @@ const RecipeModel = [
         .isIn(["00:30:00", "00:45:00", "01:00:00", "01:00:01"]),
     body("difficulty")
         .notEmpty().withMessage("Difficulty tidak boleh kosong.")
-        .isIn(["easy","medium","hard"]).withMessage("Difficulty harus berisi easy, medium atau hard"),
+        .isIn(["easy", "medium", "hard"]).withMessage("Difficulty harus berisi easy, medium atau hard"),
     body("calories")
-    .optional()
+        .optional()
         .isInt().withMessage("Calories harus berupa integer"),
     body("portion")
         .notEmpty().withMessage("Portion tidak boleh kosong.")
@@ -58,7 +58,7 @@ const RecipeModel = [
     body("tips")
         .optional()
         .isArray().withMessage("Tips harus berupa array.")
-    .custom(tips => {
+        .custom(tips => {
             tips.forEach(tip => {
                 if (typeof tip !== 'string') {
                     throw new Error("Setiap tips harus berupa string.");
@@ -80,10 +80,10 @@ const RecipeModel = [
 ];
 
 function preparingNewRecipeData(req, res, next) {
-    req.body.tips = JSON.parse(req.body.tips)
+    req.body.tips ? req.body.tips = JSON.parse(req.body.tips) : req.body.tips = []
+    req.body.tags ? req.body.tags = JSON.parse(req.body.tags) : req.body.tags = []
     req.body.ingredients = JSON.parse(req.body.ingredients)
     req.body.steps = JSON.parse(req.body.steps)
-    req.body.tags = JSON.parse(req.body.tags)
     next()
 }
 

@@ -546,7 +546,8 @@ const RecipesController = {
                                 }
                             }
                         }
-                    }
+                    },
+                    authorUID: "$user.uid"
                 }
             },
             {
@@ -597,6 +598,39 @@ const RecipesController = {
             })
         }
     },
+
+    deleteRecipe: async (req, res) => {
+        try {
+            const deleted = await KulineryDB.deleteData({
+                table_name: "recipes",
+                filter: {
+                    id_user: req.user._id,
+                    _id: ObjectId.createFromHexString(req.body.id_recipe)
+                },
+            })
+
+            if (deleted.deletedCount > 0) {
+                res.status(200).json({
+                    method: req.method,
+                    status: true,
+                    message: 'Resep berhasil dihapus'
+                });
+            } else {
+                res.status(404).json({
+                    method: req.method,
+                    status: false,
+                    message: 'Resep tidak ditemukan atau tidak dapat dihapus'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                method: req.method,
+                status: false,
+                message: 'Terjadi kesalahan saat menghapus resep',
+                error: error.message
+            });
+        }
+    }
 }
 
 module.exports = { RecipesController }

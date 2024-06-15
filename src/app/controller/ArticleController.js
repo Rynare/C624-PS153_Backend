@@ -235,7 +235,8 @@ const ArticleController = {
                                 }
                             }
                         }
-                    }
+                    },
+                    authorUID: "$user.uid"
                 }
             },
             {
@@ -497,9 +498,9 @@ const ArticleController = {
             })
         }
     },
-    getArticlesBySearch: async (req, res) => { 
+    getArticlesBySearch: async (req, res) => {
         const keyword = req.params.keyword
-        
+
         let { page } = req.params
         if (page >= 1) {
             page -= 1
@@ -511,13 +512,13 @@ const ArticleController = {
             const articles = db.collection("articles")
             const collections = articles.aggregate([
                 {
-                $match: {
-                    $or: [
-                        { title: { $regex: keyword, $options: 'i' } },
-                        { description: { $regex: keyword, $options: 'i' } }
-                    ]
-                }
-            },{
+                    $match: {
+                        $or: [
+                            { title: { $regex: keyword, $options: 'i' } },
+                            { description: { $regex: keyword, $options: 'i' } }
+                        ]
+                    }
+                }, {
                     $lookup: {
                         from: "users",
                         localField: "id_user",
@@ -622,9 +623,9 @@ const ArticleController = {
             });
         }
     },
-    getArticlesBySearchOnPage: async (req, res) => { 
+    getArticlesBySearchOnPage: async (req, res) => {
         const keyword = req.params.keyword
-        
+
         let { page } = req.params
         if (page >= 1) {
             page -= 1
@@ -636,13 +637,13 @@ const ArticleController = {
             const articles = db.collection("articles")
             const collections = articles.aggregate([
                 {
-                $match: {
-                    $or: [
-                        { title: { $regex: keyword, $options: 'i' } },
-                        { description: { $regex: keyword, $options: 'i' } }
-                    ]
-                }
-            },{
+                    $match: {
+                        $or: [
+                            { title: { $regex: keyword, $options: 'i' } },
+                            { description: { $regex: keyword, $options: 'i' } }
+                        ]
+                    }
+                }, {
                     $lookup: {
                         from: "users",
                         localField: "id_user",
@@ -747,5 +748,37 @@ const ArticleController = {
             });
         }
     },
+    deleteArticle: async (req, res) => {
+        try {
+            const deleted = await KulineryDB.deleteData({
+                table_name: "articles",
+                filter: {
+                    id_user: req.user._id,
+                    _id: ObjectId.createFromHexString(req.body.id_article)
+                },
+            })
+
+            if (deleted.deletedCount > 0) {
+                res.status(200).json({
+                    method: req.method,
+                    status: true,
+                    message: 'Artikel berhasil dihapus'
+                });
+            } else {
+                res.status(404).json({
+                    method: req.method,
+                    status: false,
+                    message: 'Artikel tidak ditemukan atau tidak dapat dihapus'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                method: req.method,
+                status: false,
+                message: 'Terjadi kesalahan saat menghapus artikel',
+                error: error.message
+            });
+        }
+    }
 }
 module.exports = { ArticleController }

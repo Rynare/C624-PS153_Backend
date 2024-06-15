@@ -6,17 +6,17 @@ const path = require('path');
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: 'coba', 
+        folder: 'coba',
         format: async (req, file) => {
             const allowedFormats = ['jpeg', 'jpg', 'webp'];
             const extname = path.extname(file.originalname).toLowerCase().substring(1);
             if (!allowedFormats.includes(extname)) {
                 throw new Error('Hanya file JPEG, JPG, dan WEBP yang diizinkan.');
             }
-            return extname; 
+            return extname;
         },
         public_id: (req, file) => {
-            return Math.random().toString().substring(2,7) + new Date().toISOString().substring(0,10) + Math.random().toString().substring(2,7);
+            return Math.random().toString().substring(2, 7) + new Date().toISOString().substring(0, 10) + Math.random().toString().substring(2, 7);
         },
     },
 });

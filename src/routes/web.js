@@ -15,6 +15,7 @@ const { PopularController } = require('../app/controller/PopularController');
 const { isLogin } = require('../app/middleware/isLogin');
 const { LikesController } = require('../app/controller/LikesController');
 const { UserActController } = require('../app/controller/UserActController');
+const { KulineryDB } = require('../app/database/KulineryDB');
 
 route.get(['/', '/api'], (req, res) => {
     res.status(200).json({
@@ -46,20 +47,21 @@ route.post("/api/recipe/like/:id_recipe", isLogin, validationHandler, LikesContr
 route.post("/api/article/like/:id_article", isLogin, validationHandler, LikesController.article)
 
 route.post("/api/recipe", uploadThis.single("thumbnail"), handleMulterError, isLogin, preparingNewRecipeData, RecipeModel, validationHandler, RecipesController.postRecipe)
+route.delete("/api/recipe", isLogin, RecipesController.deleteRecipe)
 route.get("/api/recipes", RecipesController.getRecipes)
 route.get("/api/recipes/page/:page", RecipesController.getRecipesOnPage)
 route.get("/api/recipes/search/:keyword", RecipesController.getRecipesBySearch)
 route.get("/api/recipes/search/:keyword/:page", RecipesController.getRecipesBySearchOnPage)
 route.get("/api/recipe/detail/:slug", RecipesController.getRecipeDetail)
-// route.get("/api/recipes/category/:category_slug/:page", RecipesController.getRecipesByCategoryOnPage)
+
 
 route.post("/api/article/", uploadThis.single("thumbnail"), handleMulterError, isLogin, ArticleModel, validationHandler, ArticleController.postArticle)
+route.delete("/api/article/", isLogin, ArticleController.deleteArticle)
 route.get("/api/articles/", ArticleController.getArticles)
 route.get("/api/articles/page/:page", ArticleController.getArticlesOnPage)
 route.get("/api/articles/search/:keyword", ArticleController.getArticlesBySearch)
 route.get("/api/articles/search/:keyword/:page", ArticleController.getArticlesBySearchOnPage)
 route.get("/api/article/detail/:slug", ArticleController.getArticleDetail)
-// route.get("/api/articles/category/:category_slug/:page", ArticleController.getArticlesByCategoryOnPage)
 
 route.get("/api/recipe/comments/:id_recipe/:nth_page", CommentController.getRecipeComments)
 route.get("/api/article/comments/:id_article/:nth_page", CommentController.getArticleComments)

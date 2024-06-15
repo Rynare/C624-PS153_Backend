@@ -19,9 +19,14 @@ const ArticleModel = [
     body("title")
         .notEmpty().withMessage("title tidak boleh kosong.")
         .isString().withMessage("title harus berupa string."),
-    body("category")
-        .notEmpty().withMessage("category tidak boleh kosong.")
-        .isIn(["uncategorized", "tips-masak", "inspirasi-dapur", "makanan-gaya-hidup", "resep-lezat-anti-sisa"]).withMessage("category tidak valid."),
+    body('category')
+        .notEmpty().withMessage('Category tidak boleh kosong.')
+        .custom(async (value) => {
+            const isValid = await KulineryDB.findData({ table_name: "article_categories", filter: { slug: value } })
+            if (!isValid) {
+                throw new Error('Category tidak valid');
+            }
+        }),
     body("description")
         .notEmpty().withMessage("description tidak boleh kosong.")
         .isString().withMessage("description harus berupa string"),
