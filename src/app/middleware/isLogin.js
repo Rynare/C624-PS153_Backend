@@ -27,7 +27,7 @@ async function isLogin(req, res, next) {
             message: "Internal Server Error",
             error: {
                 error_possibilities: "Unprocessible: Invalid auth parameters.",
-                error_atatus: "Unauthorized: User not logged in or invalid credentials.",
+                error_status: "Unauthorized: User not logged in or invalid credentials.",
                 error_message: error.message,
             }
         });
