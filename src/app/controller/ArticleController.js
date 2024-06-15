@@ -25,7 +25,6 @@ const ArticleController = {
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                 .join(' ');
 
-            console.log(req.user._id);
 
             const category = {
                 "slug": categorySlug,

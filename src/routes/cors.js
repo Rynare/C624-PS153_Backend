@@ -3,7 +3,8 @@ const CORS_OPTION = {
         'http://localhost:3000',
         'https://api-resepnya.vercel.app',
         'http://localhost:8080',
-        "https://rynare.github.io"
+        "https://rynare.github.io",
+        "https://qulinery.vercel.app"
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']

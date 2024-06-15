@@ -153,12 +153,11 @@ const AuthController = {
             });
                 res.status(200).json({
 method: req.method,
-                status: false,
+                status: true,
                     message: "Data pengguna berhasil diperbarui.",
                 results: updatedData,
                 })
             } catch (error) {
-                console.log(error)
                 res.status(500).json({
                     method: req.method,
                 status: false,

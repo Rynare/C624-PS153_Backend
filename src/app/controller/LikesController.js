@@ -40,7 +40,6 @@ const LikesController = {
                     return 0;
                 }
             } catch (error) {
-                console.error('Error fetching like count:', error);
                 return 0;
             }
         }
@@ -80,7 +79,6 @@ const LikesController = {
                 });
             }
         } catch (error) {
-            console.log(error)
             res.status(500).json({
                 method: req.method,
                 error: true,
@@ -126,7 +124,6 @@ const LikesController = {
                     return 0;
                 }
             } catch (error) {
-                console.error('Error fetching like count:', error);
                 return 0;
             }
         }
@@ -166,7 +163,6 @@ const LikesController = {
                 });
             }
         } catch (error) {
-            console.log(error)
             res.status(500).json({
                 method: req.method,
                 error: true,
