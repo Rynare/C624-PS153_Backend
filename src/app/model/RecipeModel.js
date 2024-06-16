@@ -6,6 +6,7 @@ const RecipeModel = [
     body("slug")
         .notEmpty().withMessage("Slug tidak boleh kosong.")
         .isSlug().withMessage("Slug tidak valid")
+        .isLength({ max: 101 })
         .custom(async value => {
             const slug = await KulineryDB.findData({
                 table_name: "recipes",
@@ -19,7 +20,8 @@ const RecipeModel = [
         }),
     body("title")
         .notEmpty().withMessage("Title tidak boleh kosong.")
-        .isString().withMessage("Title harus berupa string."),
+        .isString().withMessage("Title harus berupa string.")
+        .isLength({ max: 61 }),
     body("description")
         .notEmpty().withMessage("Description tidak boleh kosong.")
         .isString().withMessage("Description harus berupa string."),
@@ -80,10 +82,17 @@ const RecipeModel = [
 ];
 
 function preparingNewRecipeData(req, res, next) {
-    req.body.tips ? req.body.tips = JSON.parse(req.body.tips) : req.body.tips = []
-    req.body.tags ? req.body.tags = JSON.parse(req.body.tags) : req.body.tags = []
-    req.body.ingredients = JSON.parse(req.body.ingredients)
-    req.body.steps = JSON.parse(req.body.steps)
+    function parseThisReq(value) {
+        try {
+            return JSON.parse(value)
+        } catch (error) {
+            return []
+        }
+    }
+    req.body.tips = parseThisReq(req.body.tips)
+    req.body.tags = parseThisReq(req.body.tags)
+    req.body.ingredients = parseThisReq(req.body.ingredients)
+    req.body.steps = parseThisReq(req.body.steps)
     next()
 }
 

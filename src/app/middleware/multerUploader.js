@@ -6,7 +6,7 @@ const path = require('path');
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: 'coba',
+        folder: `qulinery/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${new Date().getDate()}`,
         format: async (req, file) => {
             const allowedFormats = ['jpeg', 'jpg', 'webp'];
             const extname = path.extname(file.originalname).toLowerCase().substring(1);
