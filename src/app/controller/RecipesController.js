@@ -601,15 +601,28 @@ const RecipesController = {
 
     deleteRecipe: async (req, res) => {
         try {
+            const id_recipe = ObjectId.createFromHexString(req.body.id_recipe)
             const deleted = await KulineryDB.deleteData({
                 table_name: "recipes",
                 filter: {
                     id_user: req.user._id,
-                    _id: ObjectId.createFromHexString(req.body.id_recipe)
+                    _id: id_recipe
                 },
             })
 
             if (deleted.deletedCount > 0) {
+                KulineryDB.deleteDatas({
+                    table_name: "recipe_likes",
+                    filter: {
+                        id_recipe: { $eq: id_recipe }
+                    }
+                })
+                KulineryDB.deleteDatas({
+                    table_name: "recipe_comments",
+                    filter: {
+                        id_recipe: { $eq: id_recipe }
+                    }
+                })
                 res.status(200).json({
                     method: req.method,
                     status: true,

@@ -136,33 +136,33 @@ const AuthController = {
     },
     updateUser: async (req, res) => {
         let updateDoc = {}
-        if (req?.file?.path) updateDoc = {...updateDoc,profilePicture: req.file.path}
+        if (req?.file?.path) updateDoc = { ...updateDoc, profilePicture: req.file.path }
         if (req?.body?.name) updateDoc = { ...updateDoc, name: sanitizeReq(req.body.name) }
         if (req?.file?.path || req?.body?.name) {
             try {
                 const updatedData = await KulineryDB.updateData({
-                table_name: "users",
-                filter: {
-                    _id: req.user._id
-                },
+                    table_name: "users",
+                    filter: {
+                        _id: req.user._id
+                    },
                     updateDoc: {
                         $set: {
-                        ...updateDoc
+                            ...updateDoc
+                        }
                     }
-                }
-            });
+                });
                 res.status(200).json({
-method: req.method,
-                status: true,
+                    method: req.method,
+                    status: true,
                     message: "Data pengguna berhasil diperbarui.",
-                results: updatedData,
+                    results: updatedData,
                 })
             } catch (error) {
                 res.status(500).json({
                     method: req.method,
-                status: false,
+                    status: false,
                     message: "Internal Server error",
-                error
+                    error
                 })
             }
         } else {

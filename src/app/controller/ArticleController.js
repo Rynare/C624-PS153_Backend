@@ -750,15 +750,28 @@ const ArticleController = {
     },
     deleteArticle: async (req, res) => {
         try {
+            const id_article = ObjectId.createFromHexString(req.body.id_article)
             const deleted = await KulineryDB.deleteData({
                 table_name: "articles",
                 filter: {
                     id_user: req.user._id,
-                    _id: ObjectId.createFromHexString(req.body.id_article)
+                    _id: id_article
                 },
             })
 
             if (deleted.deletedCount > 0) {
+                KulineryDB.deleteDatas({
+                    table_name: "article_likes",
+                    filter: {
+                        id_article: { $eq: id_article }
+                    }
+                })
+                KulineryDB.deleteDatas({
+                    table_name: "article_comments",
+                    filter: {
+                        id_article: { $eq: id_article }
+                    }
+                })
                 res.status(200).json({
                     method: req.method,
                     status: true,
